@@ -199,6 +199,24 @@ table.agg-tbl{border-collapse:collapse;font-size:12px;width:max-content;min-widt
 .sq{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:0.5px solid var(--bd);border-radius:8px;cursor:pointer;background:var(--bg2)}
 .sq:hover{border-color:var(--bd2)}
 .sq-n{font-weight:500;font-size:13px}.sq-m{font-size:11px;color:var(--tx2);margin-top:2px}
+.dash-wrap{display:grid;grid-template-columns:300px 1fr;gap:12px;padding:14px}
+.dash-list,.dash-editor{border:0.5px solid var(--bd);border-radius:10px;background:var(--bg2)}
+.dash-list-hd,.dash-editor-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:0.5px solid var(--bd)}
+.dash-list-bd{max-height:calc(100vh - 220px);overflow:auto;padding:8px;display:flex;flex-direction:column;gap:6px}
+.dash-item{padding:9px 10px;border:0.5px solid var(--bd);border-radius:8px;background:var(--bg);cursor:pointer}
+.dash-item:hover{border-color:var(--bd2)}
+.dash-item.on{border-color:var(--blue);box-shadow:inset 0 0 0 1px rgba(55,138,221,.35)}
+.dash-editor-bd{padding:12px;display:flex;flex-direction:column;gap:10px}
+.dash-row{display:flex;gap:8px;flex-wrap:wrap}
+.dash-row input,.dash-row textarea,.dash-row select{padding:7px 9px;border:0.5px solid var(--bd2);border-radius:7px;background:var(--bg);color:var(--tx);font-size:12px;outline:none}
+.dash-row input{min-width:180px}
+.dash-row textarea{width:100%;min-height:56px;resize:vertical}
+.widget-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.widget{border:0.5px solid var(--bd);border-radius:8px;background:var(--bg);padding:9px}
+.widget h4{font-size:12px;font-weight:600;margin-bottom:5px}
+.widget p{font-size:11px;color:var(--tx2);margin-bottom:5px}
+.user-switch{display:inline-flex;align-items:center;gap:7px;font-size:11px;color:var(--tx2)}
+.user-switch select{padding:4px 8px;border:0.5px solid var(--bd2);border-radius:7px;background:var(--bg2);color:var(--tx);font-size:11px;outline:none}
 .modal-bg{display:flex;align-items:center;justify-content:center;padding:40px 16px;background:rgba(0,0,0,.3);border-radius:12px;margin:16px}
 .modal{background:var(--bg);border:0.5px solid var(--bd2);border-radius:12px;padding:20px;width:360px;display:flex;flex-direction:column;gap:14px}
 .modal h3{font-size:15px;font-weight:500}
@@ -207,6 +225,7 @@ table.agg-tbl{border-collapse:collapse;font-size:12px;width:max-content;min-widt
 .empty-state{padding:40px;text-align:center;color:var(--tx2);font-size:13px}
 @media (max-width: 900px){
   .toolbar{align-items:flex-start}
+  .dash-wrap{grid-template-columns:1fr}
 }
 @media (max-width: 720px){
   .toolbar{padding:8px 12px}
@@ -230,9 +249,19 @@ table.agg-tbl{border-collapse:collapse;font-size:12px;width:max-content;min-widt
     <div class="htabs">
       <button class="htab on" onclick="showPane('query',this)">Query builder</button>
       <button class="htab" onclick="showPane('saved',this)">Saved queries</button>
+      <button class="htab" onclick="showPane('dashboards',this)">Dashboards</button>
     </div>
   </div>
-  <span style="font-size:11px;color:var(--tx2)">Property Insurance &middot; FY 2025</span>
+  <div class="user-switch">
+    <span>Property Insurance &middot; FY 2025</span>
+    <span>User:</span>
+    <select id="active-user" onchange="switchUser(this.value)">
+      <option>Alice</option>
+      <option>Bob</option>
+      <option>Charlie</option>
+      <option>Diana</option>
+    </select>
+  </div>
 </div>
 
 <!-- ───────── QUERY PANE ───────── -->
@@ -383,6 +412,43 @@ table.agg-tbl{border-collapse:collapse;font-size:12px;width:max-content;min-widt
   </div>
 </div>
 
+<!-- ───────── DASHBOARDS PANE ───────── -->
+<div id="pane-dashboards" style="display:none">
+  <div class="dash-wrap">
+    <div class="dash-list">
+      <div class="dash-list-hd">
+        <strong style="font-size:13px">Dashboards</strong>
+        <button class="btn sm pri" onclick="createDashboard()">+ New</button>
+      </div>
+      <div class="dash-list-bd" id="dashboard-list"></div>
+    </div>
+    <div class="dash-editor">
+      <div class="dash-editor-hd">
+        <strong style="font-size:13px">Dashboard editor</strong>
+        <div style="display:flex;gap:6px">
+          <button class="btn sm" onclick="shareActiveDashboard()">Share</button>
+          <button class="btn sm" onclick="addWidgetFromCurrentView()">Add widget</button>
+          <button class="btn sm pri" onclick="saveDashboard()">Save</button>
+        </div>
+      </div>
+      <div class="dash-editor-bd">
+        <div class="dash-row">
+          <input id="dash-name" type="text" placeholder="Dashboard name"/>
+          <input id="dash-tags" type="text" placeholder="Tags (optional)"/>
+        </div>
+        <div class="dash-row">
+          <textarea id="dash-desc" placeholder="Describe what this dashboard tracks"></textarea>
+        </div>
+        <div class="dash-row" style="justify-content:space-between">
+          <div id="dash-meta" style="font-size:11px;color:var(--tx2)">No dashboard selected.</div>
+          <button class="btn sm" onclick="deleteActiveDashboard()">Delete dashboard</button>
+        </div>
+        <div id="dash-widgets" class="widget-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ───────── SAVE MODAL ───────── -->
 <div id="pane-save-modal" style="display:none">
   <div class="modal-bg"><div class="modal">
@@ -524,10 +590,12 @@ let selCols=new Set(DEFAULT_COLS);
 let actFilters=[],filtData=[...DATA];
 let sortK='',sortD=1;
 let savedQ=[],drawerOpen=false,catOpen={};
+const STORE_KEYS={saved:'claimsiq_saved_queries_v1',dashboards:'claimsiq_dashboards_v1'};
 CATS.forEach(c=>catOpen[c.id]=false); catOpen['claim']=true;
 let selectedRowIds=new Set(),activeView='table',rowActionMode='change';
 let map=null,mapMarkersLayer=null;
 let graphOpen=false,graphChart=null,graphConfig={active:false,type:'bar',dim:'',val:'count'};
+let activeUser='Alice',dashboards=[],activeDashboardId=null;
 const ROW_ACTION_MENUS={
   add:[
     {label:'Workkard Note',key:'claim_notes',enabled:true},
@@ -1100,6 +1168,7 @@ function closeSaveModal(){showPane('query',document.querySelectorAll('.htab')[0]
 function confirmSave(){
   const name=document.getElementById('svname')?.value?.trim();if(!name)return;
   savedQ.push({name,filters:[...actFilters],cols:[...selCols],count:filtData.length,ts:new Date().toLocaleTimeString()});
+  persistSavedQueries();
   closeSaveModal();renderSaved();
 }
 function renderSaved(){
@@ -1111,25 +1180,216 @@ function loadQuery(i){
   const q=savedQ[i];actFilters=[...q.filters];selCols=new Set(q.cols);
   renderChips();applyFilters();renderDrawer();showPane('query',document.querySelectorAll('.htab')[0]);
 }
+function persistSavedQueries(){
+  localStorage.setItem(STORE_KEYS.saved,JSON.stringify(savedQ));
+}
+function hydrateSavedQueries(){
+  try{
+    const raw=localStorage.getItem(STORE_KEYS.saved);
+    if(!raw)return;
+    const parsed=JSON.parse(raw);
+    if(Array.isArray(parsed))savedQ=parsed;
+  }catch(e){}
+}
+function persistDashboards(){
+  localStorage.setItem(STORE_KEYS.dashboards,JSON.stringify(dashboards));
+}
+function hydrateDashboards(){
+  try{
+    const raw=localStorage.getItem(STORE_KEYS.dashboards);
+    if(!raw)return;
+    const parsed=JSON.parse(raw);
+    if(Array.isArray(parsed))dashboards=parsed;
+  }catch(e){}
+}
+function visibleDashboards(){
+  return dashboards.filter(d=>d.owner===activeUser||(d.sharedWith||[]).includes(activeUser));
+}
+function switchUser(user){
+  activeUser=user;
+  renderDashboardList();
+}
+function createDashboard(){
+  const name=prompt('Dashboard name?');
+  if(!name||!name.trim())return;
+  const dash={
+    id:'db-'+Date.now(),
+    name:name.trim(),
+    tags:'',
+    desc:'',
+    owner:activeUser,
+    sharedWith:[],
+    widgets:[],
+    createdAt:new Date().toISOString(),
+    updatedAt:new Date().toISOString()
+  };
+  dashboards.unshift(dash);
+  activeDashboardId=dash.id;
+  persistDashboards();
+  renderDashboardList();
+  renderActiveDashboard();
+}
+function currentDashboard(){
+  return dashboards.find(d=>d.id===activeDashboardId)||null;
+}
+function openDashboard(id){
+  activeDashboardId=id;
+  renderDashboardList();
+}
+function renderDashboardList(){
+  const list=document.getElementById('dashboard-list');
+  const vis=visibleDashboards();
+  if(!vis.length){
+    list.innerHTML='<div class="empty-state" style="padding:24px 10px">No dashboards for '+activeUser+'. Create one or ask another user to share.</div>';
+    if(activeDashboardId&&!dashboards.some(d=>d.id===activeDashboardId))activeDashboardId=null;
+    renderActiveDashboard();
+    return;
+  }
+  if(!activeDashboardId||!vis.some(d=>d.id===activeDashboardId))activeDashboardId=vis[0].id;
+  list.innerHTML=vis.map(d=>'<div class="dash-item '+(d.id===activeDashboardId?'on':'')+'" onclick="openDashboard(\''+d.id+'\')"><div class="sq-n">'+d.name+'</div><div class="sq-m">Owner: '+d.owner+' · '+(d.widgets?.length||0)+' widgets · Shared with '+(d.sharedWith?.length||0)+' users</div></div>').join('');
+  renderActiveDashboard();
+}
+function renderActiveDashboard(){
+  const d=currentDashboard();
+  const nameEl=document.getElementById('dash-name');
+  const tagsEl=document.getElementById('dash-tags');
+  const descEl=document.getElementById('dash-desc');
+  const metaEl=document.getElementById('dash-meta');
+  const widgetsEl=document.getElementById('dash-widgets');
+  if(!d){
+    nameEl.value='';tagsEl.value='';descEl.value='';
+    metaEl.textContent='No dashboard selected.';
+    widgetsEl.innerHTML='<div class="empty-state" style="grid-column:1/-1;padding:24px">Pick or create a dashboard to start adding widgets.</div>';
+    return;
+  }
+  nameEl.value=d.name||'';
+  tagsEl.value=d.tags||'';
+  descEl.value=d.desc||'';
+  metaEl.textContent='Owner: '+d.owner+' · Shared with: '+((d.sharedWith&&d.sharedWith.length)?d.sharedWith.join(', '):'none');
+  if(!(d.widgets||[]).length){
+    widgetsEl.innerHTML='<div class="empty-state" style="grid-column:1/-1;padding:24px">No widgets yet. Build a query/graph, then click "Add widget".</div>';
+    return;
+  }
+  widgetsEl.innerHTML=d.widgets.map((w,i)=>'<div class="widget"><h4>'+w.title+'</h4><p>'+w.subtitle+'</p><p><strong>'+w.primaryValue+'</strong></p><div style="display:flex;gap:6px"><button class="btn sm" onclick="loadWidget('+i+')">Open</button><button class="btn sm" onclick="removeWidget('+i+')">Remove</button></div></div>').join('');
+}
+function saveDashboard(){
+  const d=currentDashboard();
+  if(!d)return;
+  if(d.owner!==activeUser){alert('Only owner can edit this dashboard.');return;}
+  d.name=document.getElementById('dash-name').value.trim()||d.name;
+  d.tags=document.getElementById('dash-tags').value.trim();
+  d.desc=document.getElementById('dash-desc').value.trim();
+  d.updatedAt=new Date().toISOString();
+  persistDashboards();
+  renderDashboardList();
+}
+function deleteActiveDashboard(){
+  const d=currentDashboard();
+  if(!d)return;
+  if(d.owner!==activeUser){alert('Only owner can delete this dashboard.');return;}
+  if(!confirm('Delete dashboard "'+d.name+'"?'))return;
+  dashboards=dashboards.filter(x=>x.id!==d.id);
+  activeDashboardId=null;
+  persistDashboards();
+  renderDashboardList();
+}
+function shareActiveDashboard(){
+  const d=currentDashboard();
+  if(!d)return;
+  if(d.owner!==activeUser){alert('Only owner can share this dashboard.');return;}
+  const raw=prompt('Share with users (comma-separated):',(d.sharedWith||[]).join(', '));
+  if(raw===null)return;
+  d.sharedWith=raw.split(',').map(x=>x.trim()).filter(Boolean);
+  d.updatedAt=new Date().toISOString();
+  persistDashboards();
+  renderActiveDashboard();
+  renderDashboardList();
+}
+function addWidgetFromCurrentView(){
+  const d=currentDashboard();
+  if(!d){alert('Create or select a dashboard first.');return;}
+  if(d.owner!==activeUser){alert('Only owner can edit this dashboard.');return;}
+  const title=prompt('Widget title?','Current view snapshot');
+  if(!title)return;
+  const chartSpec=aggActive?buildAggGraphSpec():buildRawGraphSpec();
+  const primaryValue=aggActive?((lastAggRows&&lastAggRows.length)+' groups from '+filtData.length+' records'):(filtData.length+' records');
+  const subtitle=chartSpec.subtitle||'Query snapshot';
+  d.widgets=d.widgets||[];
+  d.widgets.push({
+    id:'wg-'+Date.now(),
+    title:title.trim(),
+    subtitle,
+    primaryValue,
+    state:{
+      filters:[...actFilters],
+      cols:[...selCols],
+      aggOpen,
+      aggDims:[...aggDims],
+      aggVals:[...aggVals],
+      aggActive,
+      graphConfig:{...graphConfig}
+    }
+  });
+  d.updatedAt=new Date().toISOString();
+  persistDashboards();
+  renderActiveDashboard();
+  renderDashboardList();
+}
+function loadWidget(i){
+  const d=currentDashboard();
+  if(!d||!d.widgets||!d.widgets[i])return;
+  const w=d.widgets[i];
+  actFilters=[...w.state.filters];
+  selCols=new Set(w.state.cols);
+  aggOpen=!!w.state.aggOpen;
+  aggDims=[...w.state.aggDims];
+  aggVals=[...w.state.aggVals];
+  aggActive=!!w.state.aggActive;
+  graphConfig={...graphConfig,...w.state.graphConfig};
+  document.getElementById('agg-bar').classList.toggle('visible',aggOpen);
+  document.getElementById('agg-toggle-btn').classList.toggle('tog',aggOpen);
+  document.getElementById('agg-mode-badge').style.display=aggActive?'':'none';
+  renderAggChips();
+  renderChips();
+  applyFilters();
+  renderDrawer();
+  if(graphConfig.active)runGraph();
+  showPane('query',document.querySelectorAll('.htab')[0]);
+}
+function removeWidget(i){
+  const d=currentDashboard();
+  if(!d||d.owner!==activeUser)return;
+  d.widgets.splice(i,1);
+  d.updatedAt=new Date().toISOString();
+  persistDashboards();
+  renderActiveDashboard();
+  renderDashboardList();
+}
 function showPane(name,btn){
   document.querySelectorAll('.htab').forEach(t=>t.classList.remove('on'));
   if(btn)btn.classList.add('on');
   document.getElementById('pane-query').style.display=name==='query'?'block':'none';
   document.getElementById('pane-saved').style.display=name==='saved'?'block':'none';
+  document.getElementById('pane-dashboards').style.display=name==='dashboards'?'block':'none';
   document.getElementById('pane-save-modal').style.display=name==='save-modal'?'block':'none';
   if(name==='saved')renderSaved();
+  if(name==='dashboards')renderDashboardList();
 }
 
 /* ═══════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════ */
 document.addEventListener('click',closeRowMenus);
+hydrateSavedQueries();
+hydrateDashboards();
 renderRowMenus();
 renderAggChips();
 renderDrawer();
 selectDefault();
 refreshGraphOptions();
 applyFilters();
+renderSaved();
+renderDashboardList();
 switchView('table');
 </script>
 </body>
