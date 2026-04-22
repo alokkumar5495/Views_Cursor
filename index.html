@@ -199,10 +199,9 @@ table.agg-tbl{border-collapse:collapse;font-size:12px;width:max-content;min-widt
 .sq{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:0.5px solid var(--bd);border-radius:8px;cursor:pointer;background:var(--bg2)}
 .sq:hover{border-color:var(--bd2)}
 .sq-n{font-weight:500;font-size:13px}.sq-m{font-size:11px;color:var(--tx2);margin-top:2px}
-.dash-wrap{display:grid;grid-template-columns:300px 1fr;gap:12px;padding:14px}
-.dash-list,.dash-editor{border:0.5px solid var(--bd);border-radius:10px;background:var(--bg2)}
-.dash-list-hd,.dash-editor-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:0.5px solid var(--bd)}
-.dash-list-bd{max-height:calc(100vh - 220px);overflow:auto;padding:8px;display:flex;flex-direction:column;gap:6px}
+.dash-wrap{padding:14px}
+.dash-editor{border:0.5px solid var(--bd);border-radius:10px;background:var(--bg2)}
+.dash-editor-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:0.5px solid var(--bd);gap:8px;flex-wrap:wrap}
 .dash-item{padding:9px 10px;border:0.5px solid var(--bd);border-radius:8px;background:var(--bg);cursor:pointer}
 .dash-item:hover{border-color:var(--bd2)}
 .dash-item.on{border-color:var(--blue);box-shadow:inset 0 0 0 1px rgba(55,138,221,.35)}
@@ -230,7 +229,6 @@ table.agg-tbl{border-collapse:collapse;font-size:12px;width:max-content;min-widt
 .empty-state{padding:40px;text-align:center;color:var(--tx2);font-size:13px}
 @media (max-width: 900px){
   .toolbar{align-items:flex-start}
-  .dash-wrap{grid-template-columns:1fr}
 }
 @media (max-width: 720px){
   .toolbar{padding:8px 12px}
@@ -420,34 +418,22 @@ table.agg-tbl{border-collapse:collapse;font-size:12px;width:max-content;min-widt
 <!-- ───────── DASHBOARDS PANE ───────── -->
 <div id="pane-dashboards" style="display:none">
   <div class="dash-wrap">
-    <div class="dash-list">
-      <div class="dash-list-hd">
-        <strong style="font-size:13px">Dashboards</strong>
-        <button class="btn sm pri" onclick="createDashboard()">+ New</button>
-      </div>
-      <div class="dash-list-bd" id="dashboard-list"></div>
-    </div>
     <div class="dash-editor">
       <div class="dash-editor-hd">
-        <strong style="font-size:13px">Dashboard editor</strong>
+        <div class="dash-row">
+          <strong style="font-size:13px;align-self:center">Dashboard</strong>
+          <select id="dashboard-select" onchange="selectDashboardFromDropdown(this.value)"></select>
+        </div>
         <div style="display:flex;gap:6px">
+          <button class="btn sm pri" onclick="createDashboard()">+ New</button>
           <button class="btn sm" onclick="shareActiveDashboard()">Share</button>
           <button class="btn sm" onclick="addWidgetFromCurrentView()">Add widget</button>
-          <button class="btn sm pri" onclick="saveDashboard()">Save</button>
+          <button class="btn sm" onclick="addWidgetFromSavedView()">Add saved view</button>
+          <button class="btn sm" onclick="deleteActiveDashboard()">Delete</button>
         </div>
       </div>
       <div class="dash-editor-bd">
-        <div class="dash-row">
-          <input id="dash-name" type="text" placeholder="Dashboard name"/>
-          <input id="dash-tags" type="text" placeholder="Tags (optional)"/>
-        </div>
-        <div class="dash-row">
-          <textarea id="dash-desc" placeholder="Describe what this dashboard tracks"></textarea>
-        </div>
-        <div class="dash-row" style="justify-content:space-between">
-          <div id="dash-meta" style="font-size:11px;color:var(--tx2)">No dashboard selected.</div>
-          <button class="btn sm" onclick="deleteActiveDashboard()">Delete dashboard</button>
-        </div>
+        <div class="dash-row" style="justify-content:space-between"><div id="dash-meta" style="font-size:11px;color:var(--tx2)">No dashboard selected.</div></div>
         <div id="dash-widgets" class="widget-grid"></div>
       </div>
     </div>
@@ -1297,52 +1283,38 @@ function openDashboard(id){
   activeDashboardId=id;
   renderDashboardList();
 }
+function selectDashboardFromDropdown(id){
+  activeDashboardId=id||null;
+  renderDashboardList();
+}
 function renderDashboardList(){
-  const list=document.getElementById('dashboard-list');
+  const dd=document.getElementById('dashboard-select');
   const vis=visibleDashboards();
   if(!vis.length){
-    list.innerHTML='<div class="empty-state" style="padding:24px 10px">No dashboards for '+activeUser+'. Create one or ask another user to share.</div>';
-    if(activeDashboardId&&!dashboards.some(d=>d.id===activeDashboardId))activeDashboardId=null;
+    dd.innerHTML='<option value="">No dashboards</option>';
+    activeDashboardId=null;
     renderActiveDashboard();
     return;
   }
   if(!activeDashboardId||!vis.some(d=>d.id===activeDashboardId))activeDashboardId=vis[0].id;
-  list.innerHTML=vis.map(d=>'<div class="dash-item '+(d.id===activeDashboardId?'on':'')+'" onclick="openDashboard(\''+d.id+'\')"><div class="sq-n">'+d.name+'</div><div class="sq-m">Owner: '+d.owner+' · '+(d.widgets?.length||0)+' widgets · Shared with '+(d.sharedWith?.length||0)+' users</div></div>').join('');
+  dd.innerHTML=vis.map(d=>'<option value="'+d.id+'" '+(d.id===activeDashboardId?'selected':'')+'>'+esc(d.name)+' ('+d.owner+')</option>').join('');
   renderActiveDashboard();
 }
 function renderActiveDashboard(){
   const d=currentDashboard();
-  const nameEl=document.getElementById('dash-name');
-  const tagsEl=document.getElementById('dash-tags');
-  const descEl=document.getElementById('dash-desc');
   const metaEl=document.getElementById('dash-meta');
   const widgetsEl=document.getElementById('dash-widgets');
   if(!d){
-    nameEl.value='';tagsEl.value='';descEl.value='';
-    metaEl.textContent='No dashboard selected.';
+    metaEl.textContent='No dashboard selected. Create one or ask another user to share.';
     widgetsEl.innerHTML='<div class="empty-state" style="grid-column:1/-1;padding:24px">Pick or create a dashboard to start adding widgets.</div>';
     return;
   }
-  nameEl.value=d.name||'';
-  tagsEl.value=d.tags||'';
-  descEl.value=d.desc||'';
-  metaEl.textContent='Owner: '+d.owner+' · Shared with: '+((d.sharedWith&&d.sharedWith.length)?d.sharedWith.join(', '):'none');
+  metaEl.textContent=d.name+' · Owner: '+d.owner+' · Shared with: '+((d.sharedWith&&d.sharedWith.length)?d.sharedWith.join(', '):'none');
   if(!(d.widgets||[]).length){
     widgetsEl.innerHTML='<div class="empty-state" style="grid-column:1/-1;padding:24px">No widgets yet. Build a query/graph, then click "Add widget".</div>';
     return;
   }
   widgetsEl.innerHTML=d.widgets.map((w,i)=>renderWidgetCard(w,i)).join('');
-}
-function saveDashboard(){
-  const d=currentDashboard();
-  if(!d)return;
-  if(d.owner!==activeUser){alert('Only owner can edit this dashboard.');return;}
-  d.name=document.getElementById('dash-name').value.trim()||d.name;
-  d.tags=document.getElementById('dash-tags').value.trim();
-  d.desc=document.getElementById('dash-desc').value.trim();
-  d.updatedAt=new Date().toISOString();
-  persistDashboards();
-  renderDashboardList();
 }
 function deleteActiveDashboard(){
   const d=currentDashboard();
@@ -1389,6 +1361,39 @@ function addWidgetFromCurrentView(){
       aggVals:[...aggVals],
       aggActive,
       graphConfig:{...graphConfig}
+    }
+  });
+  d.updatedAt=new Date().toISOString();
+  persistDashboards();
+  renderActiveDashboard();
+  renderDashboardList();
+}
+function addWidgetFromSavedView(){
+  const d=currentDashboard();
+  if(!d){alert('Create or select a dashboard first.');return;}
+  if(d.owner!==activeUser){alert('Only owner can edit this dashboard.');return;}
+  if(!savedQ.length){alert('No saved views available. Save a query first.');return;}
+  const choices=savedQ.map((q,i)=>(i+1)+'. '+q.name).join('\n');
+  const pickRaw=prompt('Select saved view number:\n'+choices,'1');
+  if(pickRaw===null)return;
+  const idx=Number(pickRaw)-1;
+  if(!Number.isInteger(idx)||idx<0||idx>=savedQ.length){alert('Invalid selection.');return;}
+  const q=savedQ[idx];
+  const rows=applyWidgetFilters(DATA,q.filters||[]);
+  d.widgets=d.widgets||[];
+  d.widgets.push({
+    id:'wg-'+Date.now(),
+    title:q.name,
+    subtitle:'Saved view widget',
+    primaryValue:rows.length+' records',
+    state:{
+      filters:[...(q.filters||[])],
+      cols:[...(q.cols||DEFAULT_COLS)],
+      aggOpen:false,
+      aggDims:[],
+      aggVals:[],
+      aggActive:false,
+      graphConfig:{active:false,type:'bar',dim:'status',val:'count'}
     }
   });
   d.updatedAt=new Date().toISOString();
