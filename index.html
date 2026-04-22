@@ -52,6 +52,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .toolbar{display:flex;align-items:center;justify-content:space-between;padding:7px 16px;border-bottom:0.5px solid var(--bd);gap:8px;flex-wrap:wrap}
 .tl{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .rc{font-size:12px;color:var(--tx2)}
+.nl-bar{display:none;align-items:center;gap:8px;padding:8px 16px;border-bottom:0.5px solid var(--bd);background:var(--bg2);flex-wrap:wrap}
+.nl-bar.visible{display:flex}
+.nl-input{flex:1;min-width:300px;padding:7px 10px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--bg);color:var(--tx);font-size:12px;outline:none}
+.nl-help{font-size:11px;color:var(--tx2)}
 .btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border:0.5px solid var(--bd2);border-radius:7px;font-size:12px;cursor:pointer;background:transparent;color:var(--tx)}
 .btn:hover{background:var(--bg2)}
 .btn.pri{background:var(--blue);color:#fff;border-color:var(--blue)}.btn.pri:hover{background:var(--blue-dk)}
@@ -299,10 +303,17 @@ table.agg-tbl{border-collapse:collapse;font-size:12px;width:max-content;min-widt
         Aggregate
       </button>
       <button class="btn" id="graph-toggle-btn" onclick="toggleGraphBar()">Graph</button>
+      <button class="btn" id="nl-toggle-btn" onclick="toggleNaturalBar()">Ask</button>
       <button class="btn" onclick="openSaveModal()">&#128190; Save query</button>
       <button class="btn" onclick="doExport()">&#8615; Export CSV</button>
       <button class="btn pri" onclick="toggleDrawer()">&#9776; Columns <span class="pill" id="cpill">0</span></button>
     </div>
+  </div>
+  <div class="nl-bar" id="nl-bar">
+    <input id="nl-input" class="nl-input" type="text" placeholder="Ask in plain English, e.g. show claim number, status where status is open and region is north" onkeydown="if(event.key==='Enter')runNaturalQuery()"/>
+    <button class="btn sm pri" onclick="runNaturalQuery()">Generate view</button>
+    <button class="btn sm" onclick="clearNaturalQuery()">Clear</button>
+    <span class="nl-help">Tip: use "show ... where ... and ..."</span>
   </div>
 
   <div class="row-actions" id="row-actions">
@@ -682,6 +693,101 @@ function addFilter(){
 function removeFilter(i){actFilters.splice(i,1);renderChips();applyFilters();}
 function renderChips(){
   document.getElementById('fchips').innerHTML=actFilters.map((f,i)=>'<div class="chip">'+f.colLabel+' <span style="opacity:.6">'+f.op+'</span> '+(f.op.startsWith('is')?'':f.val)+'<span class="chip-x" onclick="removeFilter('+i+')">&#215;</span></div>').join('');
+}
+function toggleNaturalBar(){
+  const open=!document.getElementById('nl-bar').classList.contains('visible');
+  document.getElementById('nl-bar').classList.toggle('visible',open);
+  document.getElementById('nl-toggle-btn').classList.toggle('tog',open);
+  if(open)document.getElementById('nl-input').focus();
+}
+function clearNaturalQuery(){
+  document.getElementById('nl-input').value='';
+}
+function findColumnByPhrase(phrase){
+  const q=String(phrase||'').toLowerCase().trim().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ');
+  if(!q)return null;
+  const exact=ALL_COLS.find(c=>c.label.toLowerCase()===q||c.key===q.replace(/\s+/g,'_'));
+  if(exact)return exact;
+  const includes=ALL_COLS.find(c=>c.label.toLowerCase().includes(q)||q.includes(c.label.toLowerCase()));
+  if(includes)return includes;
+  const words=q.split(' ').filter(Boolean);
+  return ALL_COLS.find(c=>{
+    const lbl=c.label.toLowerCase();
+    return words.length>1&&words.every(w=>lbl.includes(w));
+  })||null;
+}
+function parseNaturalQuery(text){
+  const raw=String(text||'').trim();
+  const lower=raw.toLowerCase();
+  const out={filters:[],cols:[]};
+  if(!raw)return out;
+  const whereParts=lower.split(/\bwhere\b/);
+  const colPart=whereParts[0];
+  const filterPart=whereParts.slice(1).join(' where ');
+  const colMatch=colPart.match(/\b(show|select|include)\b(.+)/);
+  if(colMatch){
+    const colTokens=colMatch[2].split(/,|\band\b/).map(s=>s.replace(/\bcolumns?\b/g,'').trim()).filter(Boolean);
+    colTokens.forEach(tok=>{
+      const col=findColumnByPhrase(tok);
+      if(col&&!out.cols.includes(col.key))out.cols.push(col.key);
+    });
+  }
+  const clauseSource=filterPart||lower;
+  const clauses=clauseSource.split(/\band\b|,/).map(s=>s.trim()).filter(Boolean);
+  clauses.forEach(cl=>{
+    let m=cl.match(/(.+?)\s+is\s+not\s+(.+)/);
+    if(m){
+      const col=findColumnByPhrase(m[1]); if(col)out.filters.push({col:col.key,op:'not equals',val:m[2].trim(),colLabel:col.label});
+      return;
+    }
+    m=cl.match(/(.+?)\s+(greater than|more than|above|>)\s+(.+)/);
+    if(m){
+      const col=findColumnByPhrase(m[1]); if(col)out.filters.push({col:col.key,op:'greater than',val:m[3].trim(),colLabel:col.label});
+      return;
+    }
+    m=cl.match(/(.+?)\s+(less than|below|under|<)\s+(.+)/);
+    if(m){
+      const col=findColumnByPhrase(m[1]); if(col)out.filters.push({col:col.key,op:'less than',val:m[3].trim(),colLabel:col.label});
+      return;
+    }
+    m=cl.match(/(.+?)\s+starts with\s+(.+)/);
+    if(m){
+      const col=findColumnByPhrase(m[1]); if(col)out.filters.push({col:col.key,op:'starts with',val:m[2].trim(),colLabel:col.label});
+      return;
+    }
+    m=cl.match(/(.+?)\s+contains\s+(.+)/);
+    if(m){
+      const col=findColumnByPhrase(m[1]); if(col)out.filters.push({col:col.key,op:'contains',val:m[2].trim(),colLabel:col.label});
+      return;
+    }
+    m=cl.match(/(.+?)\s+(is|equals|equal to)\s+(.+)/);
+    if(m){
+      const col=findColumnByPhrase(m[1]); if(col)out.filters.push({col:col.key,op:'equals',val:m[3].trim(),colLabel:col.label});
+      return;
+    }
+    const statusVal=['open','closed','pending','under review','rejected'].find(v=>cl.includes(v));
+    if(statusVal&&cl.includes('status'))out.filters.push({col:'status',op:'equals',val:statusVal,colLabel:'Status'});
+    const regionVal=['north','south','east','west'].find(v=>cl.includes(v));
+    if(regionVal&&cl.includes('region'))out.filters.push({col:'region',op:'equals',val:regionVal,colLabel:'Region'});
+  });
+  return out;
+}
+function runNaturalQuery(){
+  const txt=document.getElementById('nl-input').value.trim();
+  if(!txt){alert('Enter a request in plain English.');return;}
+  const parsed=parseNaturalQuery(txt);
+  if(!parsed.filters.length&&!parsed.cols.length){
+    alert('Could not understand the request. Try format: show claim number, status where status is open and region is north');
+    return;
+  }
+  actFilters=parsed.filters;
+  if(parsed.cols.length)selCols=new Set(parsed.cols);
+  document.getElementById('fform').innerHTML='';
+  renderChips();
+  clearAgg();
+  clearGraph();
+  renderDrawer();
+  applyFilters();
 }
 function resetAll(){
   actFilters=[];renderChips();document.getElementById('fform').innerHTML='';
