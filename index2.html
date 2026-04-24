@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WorkKard Schema Explorer</title>
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+  crossorigin=""
+/>
+<script
+  src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"
+  crossorigin="anonymous"
+></script>
+<style>
+:root{
+  --bg:#fff;--bg2:#f5f5f4;--bg3:#eef2f7;
+  --tx:#1a1a1a;--tx2:#6b6b6b;--tx3:#a0a0a0;
+  --bd:rgba(0,0,0,0.09);--bd2:rgba(0,0,0,0.17);--bd3:rgba(0,0,0,0.28);
+  --blue:#378ADD;--blue-dk:#185FA5;--blue-lt:#E6F1FB;
+  --r:8px;--rl:12px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1e1e1e;--bg2:#272727;--bg3:#2f3540;
+  --tx:#e8e8e8;--tx2:#a0a0a0;--tx3:#555;
+  --bd:rgba(255,255,255,0.09);--bd2:rgba(255,255,255,0.17);--bd3:rgba(255,255,255,0.28);
+  --blue-lt:#0c2d4a;
+}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;color:var(--tx);background:var(--bg)}
+
+/* ── header ── */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:0.5px solid var(--bd);background:var(--bg)}
+.logo{font-size:14px;font-weight:500}.logo b{color:var(--blue);font-weight:500}
+.htabs{display:flex;gap:2px}
+.htab{padding:5px 12px;border:none;background:transparent;border-radius:6px;font-size:12px;cursor:pointer;color:var(--tx2)}
+.htab.on{background:var(--bg2);color:var(--tx);font-weight:500}
+
+/* ── filter bar ── */
+.fbar{display:flex;align-items:flex-start;gap:8px;padding:8px 16px;border-bottom:0.5px solid var(--bd);background:var(--bg2);flex-wrap:wrap;min-height:44px}
+.add-f{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border:0.5px dashed var(--bd2);border-radius:20px;font-size:12px;cursor:pointer;color:var(--tx2);background:transparent;white-space:nowrap}
+.add-f:hover{border-color:var(--bd3);color:var(--tx)}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px 3px 10px;background:var(--blue-lt);color:var(--blue-dk);border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap}
+.chip-x{cursor:pointer;opacity:.7;font-size:14px;line-height:1;color:var(--blue-dk)}.chip-x:hover{opacity:1}
+.ff{display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:0.5px solid var(--bd2);border-radius:8px;padding:4px 8px}
+.ff select,.ff input{border:none;background:transparent;font-size:12px;color:var(--tx);outline:none;padding:2px 4px;cursor:pointer}
+.ff input{width:100px}
+
+/* ── toolbar ── */
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:7px 16px;border-bottom:0.5px solid var(--bd);gap:8px;flex-wrap:wrap}
+.tl{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.rc{font-size:12px;color:var(--tx2)}
+.nl-bar{display:none;align-items:center;gap:8px;padding:8px 16px;border-bottom:0.5px solid var(--bd);background:var(--bg2);flex-wrap:wrap}
+.nl-bar.visible{display:flex}
+.nl-input{flex:1;min-width:300px;padding:7px 10px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--bg);color:var(--tx);font-size:12px;outline:none}
+.nl-help{font-size:11px;color:var(--tx2)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border:0.5px solid var(--bd2);border-radius:7px;font-size:12px;cursor:pointer;background:transparent;color:var(--tx)}
+.btn:hover{background:var(--bg2)}
+.btn.pri{background:var(--blue);color:#fff;border-color:var(--blue)}.btn.pri:hover{background:var(--blue-dk)}
+.btn.sm{padding:3px 8px;font-size:11px;border-radius:5px}
+.btn.tog{background:var(--bg3);border-color:var(--blue);color:var(--blue)}
+.btn.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn.ask{
+  background:linear-gradient(180deg,#7C3AED 0%, #2563EB 100%);
+  color:#fff;
+  border-color:rgba(124,58,237,.55);
+  box-shadow:0 8px 18px rgba(37,99,235,.18);
+}
+.btn.ask:hover{filter:brightness(1.04)}
+.btn.ask .new-bdg{
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:1px 6px;border-radius:999px;
+  background:rgba(255,255,255,.22);
+  border:1px solid rgba(255,255,255,.28);
+}
+.seg{display:inline-flex;align-items:center;border:0.5px solid var(--bd2);border-radius:8px;overflow:hidden;background:var(--bg)}
+.seg-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:70px;padding:5px 12px;border:none;border-right:0.5px solid var(--bd2);background:transparent;color:var(--tx2);font-size:12px;cursor:pointer}
+.seg-btn:last-child{border-right:none}
+.seg-btn:hover{background:var(--bg2);color:var(--tx)}
+.seg-btn.on{background:var(--blue-lt);color:var(--blue-dk);font-weight:500}
+.pill{background:var(--blue);color:#fff;border-radius:10px;font-size:10px;font-weight:500;padding:1px 6px;min-width:18px;display:inline-flex;align-items:center;justify-content:center}
+
+/* ── agg bar ── */
+.agg-bar{display:none;align-items:center;gap:0;border-bottom:1px solid var(--blue);background:var(--bg3)}
+.agg-bar.visible{display:flex}
+.agg-section{display:flex;align-items:center;gap:8px;padding:8px 14px;border-right:0.5px solid var(--bd2);flex-shrink:0}
+.agg-section:last-child{border-right:none;flex:1}
+.agg-label{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.agg-label.row-lbl{color:#534AB7}
+.agg-label.val-lbl{color:#0F6E56}
+.agg-chips{display:flex;flex-wrap:wrap;gap:4px;flex:1;min-height:22px}
+.ac{display:inline-flex;align-items:center;gap:3px;padding:2px 7px 2px 9px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap;cursor:default}
+.ac-dim{background:#EEEDFE;color:#534AB7}
+.ac-val{background:#E1F5EE;color:#085041}
+.ac-fn{display:inline-block;background:rgba(0,0,0,.1);border-radius:6px;padding:0 4px;font-size:10px;font-weight:400;margin-right:2px}
+.ac-x{cursor:pointer;opacity:.6;font-size:12px;line-height:1;margin-left:1px}.ac-x:hover{opacity:1}
+.agg-add{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border:0.5px dashed var(--bd2);border-radius:20px;font-size:11px;cursor:pointer;color:var(--tx2);background:transparent;white-space:nowrap;flex-shrink:0}
+.agg-add:hover{color:var(--tx);border-color:var(--bd3)}
+.agg-inline-form{display:inline-flex;align-items:center;gap:4px;background:var(--bg);border:0.5px solid var(--bd2);border-radius:7px;padding:3px 7px;flex-shrink:0}
+.agg-inline-form select{border:none;background:transparent;font-size:11px;color:var(--tx);outline:none;cursor:pointer;max-width:150px}
+.agg-run{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.agg-run:hover{background:var(--blue-dk)}
+.agg-clear{padding:3px 8px;border:0.5px solid var(--bd2);border-radius:6px;font-size:11px;cursor:pointer;background:transparent;color:var(--tx2);white-space:nowrap;flex-shrink:0}
+.agg-clear:hover{background:var(--bg2)}
+
+/* ── graph builder ── */
+.graph-bar{display:none;align-items:center;gap:8px;padding:8px 16px;border-bottom:0.5px solid var(--bd);background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);flex-wrap:wrap}
+.graph-bar.visible{display:flex}
+.graph-lbl{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--blue-dk)}
+.graph-inline{display:inline-flex;align-items:center;gap:4px;background:var(--bg);border:0.5px solid var(--bd2);border-radius:8px;padding:4px 8px}
+.graph-inline select{border:none;background:transparent;font-size:12px;color:var(--tx);outline:none;cursor:pointer;padding:2px 4px;max-width:170px}
+.graph-card{display:none;margin:14px 16px 0;border:0.5px solid var(--bd);border-radius:12px;background:var(--bg);overflow:hidden}
+.graph-card.visible{display:block}
+.graph-card-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:0.5px solid var(--bd);background:var(--bg2)}
+.graph-card-hd h3{font-size:13px;font-weight:500}
+.graph-card-sub{font-size:11px;color:var(--tx2);margin-top:2px}
+.graph-card-bd{padding:14px 16px;height:340px}
+.graph-empty{display:flex;align-items:center;justify-content:center;height:100%;text-align:center;color:var(--tx2);font-size:13px}
+
+/* ── main layout ── */
+.layout{display:flex}
+.tbl-wrap{flex:1;min-width:0;overflow-x:auto;max-height:calc(100vh - 210px);overflow-y:auto}
+.map-wrap{display:none;flex:1;min-width:0;height:calc(100vh - 210px);border-right:0.5px solid var(--bd);background:var(--bg2)}
+.map-wrap.active{display:block}
+#claims-map{width:100%;height:100%}
+.map-empty{display:flex;align-items:center;justify-content:center;height:100%;padding:24px;text-align:center;color:var(--tx2);font-size:13px}
+
+/* ── raw table ── */
+table.raw-tbl{border-collapse:collapse;font-size:12px;width:max-content;min-width:100%}
+.raw-tbl thead th{padding:8px 12px;text-align:left;font-size:11px;font-weight:500;color:var(--tx2);background:var(--bg2);border-bottom:0.5px solid var(--bd);white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:0;z-index:2}
+.raw-tbl thead th.sc{position:sticky;left:0;z-index:3}
+.raw-tbl td{padding:7px 12px;border-bottom:0.5px solid var(--bd);white-space:nowrap}
+.raw-tbl td.sc{position:sticky;left:0;z-index:1;background:var(--bg)}
+.raw-tbl tr:hover td{background:var(--bg2)}.raw-tbl tr:hover td.sc{background:var(--bg2)}
+.raw-tbl tr.sel td{background:#EEF5FC}.raw-tbl tr.sel td.sc{background:#E3EDFA}
+.raw-tbl th.chk,.raw-tbl td.chk{width:42px;min-width:42px;padding:7px 10px;text-align:center}
+.raw-tbl th.chk{position:sticky;left:0;z-index:4}
+.raw-tbl td.chk{position:sticky;left:0;z-index:2;background:var(--bg)}
+.raw-tbl td.chk input,.raw-tbl th.chk input{accent-color:var(--blue);cursor:pointer}
+.raw-tbl th.sel-sc{left:42px}
+.raw-tbl td.sel-sc{left:42px}
+
+/* ── agg result table ── */
+table.agg-tbl{border-collapse:collapse;font-size:12px;width:max-content;min-width:100%}
+.agg-tbl thead th{padding:8px 12px;text-align:left;font-size:11px;font-weight:500;background:var(--bg2);border-bottom:0.5px solid var(--bd);white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:0;z-index:2}
+.agg-tbl thead th.dim-h{color:#534AB7}
+.agg-tbl thead th.met-h{text-align:right;color:#0F6E56}
+.agg-tbl td{padding:8px 12px;border-bottom:0.5px solid var(--bd);white-space:nowrap}
+.agg-tbl td.dim-c{font-weight:500;background:var(--bg2)}
+.agg-tbl td.met-c{text-align:right;font-variant-numeric:tabular-nums}
+.agg-tbl tr.tot td{font-weight:600;background:var(--bg2);border-top:1.5px solid var(--bd2)}
+.agg-tbl tr.tot td.met-c{color:var(--blue-dk)}
+.agg-tbl tr:not(.tot):hover td{background:#EEF5FC}.agg-tbl tr:not(.tot):hover td.dim-c{background:#E3EDFA}
+.agg-mode-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;background:var(--blue-lt);color:var(--blue-dk);border-radius:20px;font-size:11px;font-weight:500}
+
+/* ── row action bar ── */
+.row-actions{display:none;align-items:center;justify-content:flex-start;gap:14px;padding:8px 16px;border-bottom:0.5px solid var(--bd);background:var(--bg2);position:relative}
+.row-actions.visible{display:flex}
+.row-actions .meta{font-size:12px;color:var(--tx2);font-weight:500}
+.row-action-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.row-menu-wrap{position:relative}
+.row-menu-btn{display:inline-flex;align-items:center;gap:6px;padding:3px 2px;border:none;background:transparent;color:var(--tx);font-size:24px;cursor:pointer;border-radius:6px}
+.row-menu-btn:hover{background:var(--bg)}
+.row-menu-btn .lbl{font-size:12px;font-weight:500}
+.row-menu-btn .car{font-size:10px;color:var(--tx2);margin-top:1px}
+.row-menu{display:none;position:absolute;top:26px;left:0;min-width:210px;background:var(--bg);border:0.5px solid var(--bd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.08);z-index:20;padding:6px 0}
+.row-menu.open{display:block}
+.row-menu-item{display:flex;align-items:center;justify-content:space-between;width:100%;padding:9px 12px;border:none;background:transparent;font-size:12px;color:var(--tx);text-align:left;cursor:pointer}
+.row-menu-item:hover{background:var(--bg2)}
+.row-menu-item.dis{color:#c6c6c6;cursor:not-allowed}
+.row-menu-item.dis:hover{background:transparent}
+.row-menu-sep{height:1px;background:var(--bd);margin:5px 0}
+.row-menu-item .sub{font-size:11px;color:var(--tx3)}
+.row-action-form{display:none;align-items:center;gap:6px;flex-wrap:wrap}
+.row-action-form.visible{display:flex}
+.row-action-form select,.row-action-form input{padding:5px 8px;border:0.5px solid var(--bd2);border-radius:7px;background:var(--bg);color:var(--tx);font-size:12px;outline:none}
+
+/* ── column drawer ── */
+.drawer{width:0;flex-shrink:0;border-left:0.5px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;transition:width .18s;max-height:calc(100vh - 120px)}
+.drawer.open{width:310px}
+.dr-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:0.5px solid var(--bd);flex-shrink:0}
+.dr-hd h3{font-size:13px;font-weight:500}
+.dr-srch{padding:8px 14px;border-bottom:0.5px solid var(--bd);flex-shrink:0}
+.dr-srch input{width:100%;padding:6px 10px;border:0.5px solid var(--bd2);border-radius:7px;background:var(--bg2);color:var(--tx);font-size:12px;outline:none}
+.dr-body{flex:1;overflow-y:auto}
+.dr-cat-hdr{display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;background:var(--bg2);border-bottom:0.5px solid var(--bd)}
+.dr-cat-hdr:hover{background:var(--bg)}
+.dr-cat-lbl{font-size:11px;font-weight:500;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em;flex:1}
+.dr-cat-cnt{font-size:10px;color:var(--tx3)}
+.dr-cols{display:none;padding:4px 0}
+.dr-cols.open{display:block}
+.dr-col{display:flex;align-items:center;gap:8px;padding:5px 14px 5px 36px;font-size:12px;cursor:pointer}
+.dr-col:hover{background:var(--bg2)}
+.dr-col input{cursor:pointer;accent-color:var(--blue)}
+.dr-col label{cursor:pointer;flex:1}
+.dr-col label em{color:var(--blue-dk);font-style:normal;font-weight:500}
+.dr-ft{padding:10px 14px;border-top:0.5px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--bg2)}
+
+/* ── badges ── */
+.bdg{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:500}
+.b-fire{background:#FAECE7;color:#993C1D}.b-water{background:#E6F1FB;color:#185FA5}
+.b-theft{background:#EEEDFE;color:#534AB7}.b-storm{background:#FAEEDA;color:#854F0B}
+.b-vandalism{background:#FBEAF0;color:#993556}.b-earthquake{background:#EAF3DE;color:#3B6D11}
+.b-open{background:#E6F1FB;color:#185FA5}.b-closed{background:#EAF3DE;color:#1D9E75}
+.b-pending{background:#FAEEDA;color:#854F0B}.b-review{background:#EEEDFE;color:#534AB7}
+.b-rejected{background:#FCEBEB;color:#A32D2D}
+
+/* ── sort indicator ── */
+.si{display:inline-block;margin-left:3px;font-size:9px;opacity:.4}
+.si.on{opacity:1;color:var(--blue)}
+
+/* ── saved / modal ── */
+.saved-area{padding:16px;display:flex;flex-direction:column;gap:8px}
+.sq{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:0.5px solid var(--bd);border-radius:8px;cursor:pointer;background:var(--bg2)}
+.sq:hover{border-color:var(--bd2)}
+.sq-n{font-weight:500;font-size:13px}.sq-m{font-size:11px;color:var(--tx2);margin-top:2px}
+.dash-wrap{padding:14px}
+.dash-editor{border:0.5px solid var(--bd);border-radius:10px;background:var(--bg2)}
+.dash-editor-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:0.5px solid var(--bd);gap:8px;flex-wrap:wrap}
+.dash-item{padding:9px 10px;border:0.5px solid var(--bd);border-radius:8px;background:var(--bg);cursor:pointer}
+.dash-item:hover{border-color:var(--bd2)}
+.dash-item.on{border-color:var(--blue);box-shadow:inset 0 0 0 1px rgba(55,138,221,.35)}
+.dash-editor-bd{padding:12px;display:flex;flex-direction:column;gap:10px}
+.dash-row{display:flex;gap:8px;flex-wrap:wrap}
+.dash-row input,.dash-row textarea,.dash-row select{padding:7px 9px;border:0.5px solid var(--bd2);border-radius:7px;background:var(--bg);color:var(--tx);font-size:12px;outline:none}
+.dash-row input{min-width:180px}
+.dash-row textarea{width:100%;min-height:56px;resize:vertical}
+.widget-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.widget{border:0.5px solid var(--bd);border-radius:8px;background:var(--bg);padding:9px}
+.widget h4{font-size:12px;font-weight:600;margin-bottom:5px}
+.widget p{font-size:11px;color:var(--tx2);margin-bottom:5px}
+.widget-preview{margin:8px 0;border:0.5px solid var(--bd);border-radius:7px;overflow:auto;max-height:220px}
+.widget-preview table{width:100%;border-collapse:collapse;font-size:11px}
+.widget-preview th,.widget-preview td{padding:5px 7px;border-bottom:0.5px solid var(--bd);text-align:left;white-space:nowrap}
+.widget-preview th{background:var(--bg2);font-weight:600}
+.widget-preview .muted{padding:12px;font-size:11px;color:var(--tx2)}
+.user-switch{display:inline-flex;align-items:center;gap:7px;font-size:11px;color:var(--tx2)}
+.user-switch select{padding:4px 8px;border:0.5px solid var(--bd2);border-radius:7px;background:var(--bg2);color:var(--tx);font-size:11px;outline:none}
+.modal-bg{display:flex;align-items:center;justify-content:center;padding:40px 16px;background:rgba(0,0,0,.3);border-radius:12px;margin:16px}
+.modal{background:var(--bg);border:0.5px solid var(--bd2);border-radius:12px;padding:20px;width:360px;display:flex;flex-direction:column;gap:14px}
+.modal h3{font-size:15px;font-weight:500}
+.modal input{width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:7px;font-size:13px;background:var(--bg2);color:var(--tx);outline:none}
+.erow td{text-align:center;padding:40px;color:var(--tx2)}
+.empty-state{padding:40px;text-align:center;color:var(--tx2);font-size:13px}
+@media (max-width: 900px){
+  .toolbar{align-items:flex-start}
+}
+@media (max-width: 720px){
+  .toolbar{padding:8px 12px}
+  .toolbar .tl{width:100%}
+  .toolbar .tl:last-child{justify-content:flex-start}
+  .btn{padding:5px 10px}
+  .row-actions{padding:8px 12px}
+  .graph-bar{padding:8px 12px}
+  .graph-card{margin:12px 12px 0}
+  .graph-card-bd{height:280px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- header -->
+<div class="hdr">
+  <div style="display:flex;align-items:center;gap:14px">
+    <div class="logo"><b>Work</b>Kard &mdash; Schema Explorer</div>
+    <div class="htabs">
+      <button class="htab on" onclick="showPane('query',this)">Query builder</button>
+      <button class="htab" onclick="showPane('saved',this)">Saved queries</button>
+      <button class="htab" onclick="showPane('dashboards',this)">Dashboards</button>
+    </div>
+  </div>
+  <div class="user-switch">
+    <span>doc.workkards &middot; schema-backed demo</span>
+    <span>User:</span>
+    <select id="active-user" onchange="switchUser(this.value)">
+      <option>Alice</option>
+      <option>Bob</option>
+      <option>Charlie</option>
+      <option>Diana</option>
+    </select>
+  </div>
+</div>
+
+<!-- ───────── QUERY PANE ───────── -->
+<div id="pane-query">
+
+  <!-- filter bar -->
+  <div class="fbar" id="fbar">
+    <button class="add-f" onclick="startAddFilter()">&#43; Add filter</button>
+    <div id="fchips" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"></div>
+    <div id="fform"></div>
+  </div>
+
+  <!-- toolbar -->
+  <div class="toolbar">
+    <div class="tl">
+      <span class="rc" id="rc">Loading&hellip;</span>
+      <button class="btn sm" onclick="resetAll()" style="color:var(--tx2)">Reset all</button>
+      <span id="agg-mode-badge" style="display:none" class="agg-mode-badge">&#9654; Aggregated view</span>
+    </div>
+    <div class="tl">
+      <div class="seg" aria-label="View mode">
+        <button class="seg-btn on" id="view-table-btn" onclick="switchView('table')">Table</button>
+        <button class="seg-btn" id="view-map-btn" onclick="switchView('map')">Map</button>
+      </div>
+      <button class="btn" id="agg-toggle-btn" onclick="toggleAggBar()" title="Toggle aggregation panel">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <rect x="1" y="1.5" width="5" height="10" rx="1" stroke="currentColor" stroke-width="1.1"/>
+          <line x1="8" y1="3.5" x2="12" y2="3.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+          <line x1="8" y1="6.5" x2="12" y2="6.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+          <line x1="8" y1="9.5" x2="11" y2="9.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+        </svg>
+        Aggregate
+      </button>
+      <button class="btn" id="graph-toggle-btn" onclick="toggleGraphBar()">Graph</button>
+      <button class="btn ask" id="nl-toggle-btn" onclick="toggleNaturalBar()">Ask <span class="new-bdg">New</span></button>
+      <button class="btn" onclick="openSaveModal()">&#128190; Save query</button>
+      <button class="btn" onclick="doExport()">&#8615; Export CSV</button>
+      <button class="btn pri" onclick="toggleDrawer()">&#9776; Columns <span class="pill" id="cpill">0</span></button>
+    </div>
+  </div>
+  <div class="nl-bar" id="nl-bar">
+    <input id="nl-input" class="nl-input" type="text" placeholder="Ask in plain English, e.g. show w_casenumber_string, w_status where w_status is open" onkeydown="if(event.key==='Enter')runNaturalQuery()"/>
+    <button class="btn sm pri" onclick="runNaturalQuery()">Generate view</button>
+    <button class="btn sm" onclick="clearNaturalQuery()">Clear</button>
+    <span class="nl-help">Tip: use "show ... where ... and ..."</span>
+  </div>
+
+  <div class="row-actions" id="row-actions">
+    <div class="row-action-tools">
+      <div class="row-menu-wrap">
+        <button class="row-menu-btn" onclick="toggleRowMenu('add',event)">
+          <span class="lbl">Add</span><span class="car">&#9660;</span>
+        </button>
+        <div class="row-menu" id="row-menu-add"></div>
+      </div>
+      <div class="row-menu-wrap">
+        <button class="row-menu-btn" onclick="toggleRowMenu('change',event)">
+          <span class="lbl">Change</span><span class="car">&#9660;</span>
+        </button>
+        <div class="row-menu" id="row-menu-change"></div>
+      </div>
+      <div class="meta" id="row-actions-meta">0 records selected</div>
+      <div class="row-action-form" id="row-action-form">
+        <span id="row-action-label" style="font-size:12px;color:var(--tx2)"></span>
+        <select id="row-action-col"></select>
+        <input type="text" id="row-action-val" placeholder="Enter value"/>
+        <button class="btn sm pri" onclick="applyRowAction()">Apply</button>
+        <button class="btn sm" onclick="closeRowActionForm()">Cancel</button>
+      </div>
+      <button class="btn sm" onclick="clearSelectedRows()">Clear selection</button>
+    </div>
+  </div>
+
+  <!-- ─── AGGREGATION BAR (inline, below toolbar) ─── -->
+  <div class="agg-bar" id="agg-bar">
+
+    <!-- Group by (rows) -->
+    <div class="agg-section" style="min-width:200px;max-width:340px">
+      <span class="agg-label row-lbl">Group by</span>
+      <div class="agg-chips" id="agg-dim-chips"></div>
+      <div id="agg-dim-form"></div>
+      <button class="agg-add" onclick="showAggForm('dim')">&#43; field</button>
+    </div>
+
+    <!-- Values -->
+    <div class="agg-section" style="flex:1;min-width:200px">
+      <span class="agg-label val-lbl">Values</span>
+      <div class="agg-chips" id="agg-val-chips"></div>
+      <div id="agg-val-form"></div>
+      <button class="agg-add" onclick="showAggForm('val')">&#43; metric</button>
+    </div>
+
+    <!-- Actions -->
+    <div class="agg-section" style="border-right:none;gap:6px;flex-shrink:0">
+      <button class="agg-run" onclick="runAgg()">&#9654; Apply</button>
+      <button class="agg-clear" onclick="clearAgg()">&#10005; Clear</button>
+    </div>
+  </div>
+
+  <div class="graph-bar" id="graph-bar">
+    <span class="graph-lbl">Graph</span>
+    <div class="graph-inline"><select id="graph-type"><option value="bar">Bar</option><option value="line">Line</option><option value="pie">Pie</option><option value="doughnut">Doughnut</option></select></div>
+    <div class="graph-inline"><select id="graph-dim"></select></div>
+    <div class="graph-inline"><select id="graph-val"></select></div>
+    <button class="agg-run" onclick="runGraph()">Create graph</button>
+    <button class="agg-clear" onclick="clearGraph()">Clear</button>
+  </div>
+
+  <div class="graph-card" id="graph-card">
+    <div class="graph-card-hd">
+      <div>
+        <h3 id="graph-title">Graph preview</h3>
+        <div class="graph-card-sub" id="graph-subtitle">Visualize the current result set.</div>
+      </div>
+      <button class="btn sm" onclick="clearGraph()">Hide</button>
+    </div>
+    <div class="graph-card-bd">
+      <canvas id="graph-canvas"></canvas>
+      <div class="graph-empty" id="graph-empty" style="display:none">Choose graph settings to preview your data.</div>
+    </div>
+  </div>
+
+  <!-- main layout: table + column drawer -->
+  <div class="layout">
+    <div class="tbl-wrap" id="tbl-wrap">
+      <table id="main-table" class="raw-tbl">
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="map-wrap" id="map-wrap">
+      <div id="claims-map"></div>
+      <div class="map-empty" id="map-empty" style="display:none"></div>
+    </div>
+    <div class="drawer" id="cdrawer">
+      <div class="dr-hd"><h3>Select columns</h3><button class="btn sm" onclick="toggleDrawer()">Done</button></div>
+      <div class="dr-srch"><input type="text" id="drsrch" placeholder="Search 580+ columns&hellip;" oninput="renderDrawer()"></div>
+      <div class="dr-body" id="drbody"></div>
+      <div class="dr-ft">
+        <span id="drinf" style="font-size:11px;color:var(--tx2)">0 selected</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn sm" onclick="clearAllCols()">Clear all</button>
+          <button class="btn sm pri" onclick="selectDefault()">Default</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /pane-query -->
+
+<!-- ───────── SAVED PANE ───────── -->
+<div id="pane-saved" style="display:none">
+  <div class="saved-area" id="savedarea">
+    <div class="empty-state">No saved queries yet.</div>
+  </div>
+</div>
+
+<!-- ───────── DASHBOARDS PANE ───────── -->
+<div id="pane-dashboards" style="display:none">
+  <div class="dash-wrap">
+    <div class="dash-editor">
+      <div class="dash-editor-hd">
+        <div class="dash-row">
+          <strong style="font-size:13px;align-self:center">Dashboard</strong>
+          <select id="dashboard-select" onchange="selectDashboardFromDropdown(this.value)"></select>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn sm pri" onclick="createDashboard()">+ New</button>
+          <button class="btn sm" onclick="shareActiveDashboard()">Share</button>
+          <button class="btn sm" onclick="addWidgetFromCurrentView()">Add widget</button>
+          <button class="btn sm" onclick="addWidgetFromSavedView()">Add saved view</button>
+          <button class="btn sm" onclick="deleteActiveDashboard()">Delete</button>
+        </div>
+      </div>
+      <div class="dash-editor-bd">
+        <div class="dash-row" style="justify-content:space-between"><div id="dash-meta" style="font-size:11px;color:var(--tx2)">No dashboard selected.</div></div>
+        <div id="dash-widgets" class="widget-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ───────── SAVE MODAL ───────── -->
+<div id="pane-save-modal" style="display:none">
+  <div class="modal-bg"><div class="modal">
+    <h3>Save query</h3>
+    <div style="font-size:13px;color:var(--tx2)">Name this filter + column configuration.</div>
+    <input type="text" id="svname" placeholder="e.g. Open Florida workkards"/>
+    <div style="display:flex;gap:8px">
+      <button class="btn pri sm" style="padding:7px 14px;font-size:13px" onclick="confirmSave()">Save</button>
+      <button class="btn sm" style="padding:7px 14px;font-size:13px" onclick="closeSaveModal()">Cancel</button>
+    </div>
+  </div></div>
+</div>
+
+</div><!-- /app -->
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
+<script>
+/* ═══════════════════════════════════════════
+   COLUMN DEFINITIONS
+═══════════════════════════════════════════ */
+const SCHEMA_FIELDS=["a_acceptedDate","a_aging","a_aob_singlechoicelist","a_aobcompany_string","a_assigneeAll","a_assigneeAllId","a_assigneeAllOrgId","a_attachfiles_file","a_attachfiles_file_ft","a_attachmentName","a_attachmentName_ft","a_casenumber_string","a_changedEstimate","a_closedDate","a_completedDate","a_createdDate","a_dailyrepresentation_singlechoicelist","a_dailyrepresentationcompany_singlechoicelist","a_dateof1stcontact_date","a_dateof1streport_date","a_dateofinspection_date","a_dateofrepresentation_date","a_dateofservice_date","a_datereceivedinclaims_date","a_defensefirm_singlechoicelist","a_description","a_dueDate","a_filesTypes","a_filesTypes_ft","a_finalattorneyfees_decimal","a_finalindemnity_decimal","a_followers","a_followers_ft","a_globalsettlement_decimal","a_grouping_singlechoicelist","a_id","a_initialattorneyfees_decimal","a_initialdemand_decimal","a_initialindemnity_decimal","a_issue_singlechoicelist","a_isunassigned","a_lastModifiedDate","a_litigationcounty_singlechoicelist","a_litigationphase_singlechoicelist","a_originalDueDate","a_originalEstimate","a_overdue","a_owner","a_ownerId","a_ownerOrgId","a_plaintifffirm_string","a_proofoflossorestimate_decimal","a_propertylocation_address1_text","a_propertylocation_address2_text","a_propertylocation_city_city","a_propertylocation_country_country","a_propertylocation_county_county","a_propertylocation_state_state","a_propertylocation_zip_zip","a_rejectedDate","a_reopenedDate","a_resolution","a_resolutionAging","a_settlementamount_decimal","a_skillName","a_status","a_templateType","a_title","all","communityId","isWkshared","meta","n_appointmentdaterescheduled_date","n_appointmentdatesubsequent_date","n_attachfiles_file","n_attachfiles_file_ft","n_attachmentName","n_attachmentName_ft","n_attachworkkardfiles_filereference","n_authorityamount_decimal","n_createdBy","n_createdDate","n_darecommendation_decimal","n_dateletterreceived_date","n_dateofexecutedrelease_date","n_dateoffinaldainvoice_date","n_dateofinspection_date","n_dateofmediation_date","n_dateofmotion_date","n_dateofmsj_date","n_dateofnoticemisc_date","n_dateoforderentered_date","n_dateofrepresentation_date","n_dateofsettlement_date","n_demandamount_decimal","n_euocompletedon_date","n_euoscheduleddate_date","n_filesTypes","n_filesTypes_ft","n_gross_claim_amount_decimal","n_id","n_inspectedon_date","n_inspectionappointmentdate_date","n_inspectiondate_date","n_lettertype_singlechoicelist","n_maillettertype_singlechoicelist","n_managementconferencedate_date","n_notReviewedAging","n_noteAssociatedWith","n_offeramount_decimal","n_premediationreportdate_date","n_pretrialreportdate_date","n_publishedDate","n_rcv_decimal","n_reason_singlechoicelist","n_requestletterlype_singlechoicelist","n_responselettertype_singlechoicelist","n_reviewed","n_reviewedAging","n_reviewedBy","n_reviewedComment","n_reviewedDate","n_service_fee_decimal","n_settlementamount_decimal","n_subsequentinspectiondate_date","n_summary_text","n_supplementreason_multiplechoicelist","n_supplementreason_multiplechoicelist_ft","n_templateId","n_trialdate_date","n_type","n_visibility","p_accountId","p_associatedWith","p_billingAddress1","p_billingAddress2","p_billingCity","p_billingState","p_billingZip","p_contactName","p_contactRelationship","p_email","p_entityType","p_id","p_legalName","p_mailingAddress1","p_mailingAddress2","p_mailingCity","p_mailingState","p_mailingZip","p_orgId","p_organizationName","p_ownerOrgId","p_phoneTypeCell","p_phoneTypeCell_ft","p_phoneTypeFax","p_phoneTypeFax_ft","p_phoneTypeHome","p_phoneTypeHome_ft","p_phoneTypeWork","p_phoneTypeWork_ft","p_taxId","p_type","p_website","sharedActivityWith","sharedWith","sharedWith_ft","t_attachmentName","t_attachmentName_ft","t_cancelledDate","t_completedDate","t_createdDate","t_dueDate","t_id","t_overdue","t_owner","t_priority","t_reopenedDate","t_status","t_tagWithStatus","t_tagWithStatus_ft","t_tags","t_tags_ft","t_title","t_type","w_Litigation_singlechoicelist","w_aadjustername_firstname_string","w_aadjustername_lastname_string","w_aadjustername_middlename_string","w_aadjusterother_text","w_aadjustertype_singlechoicelist","w_aakstatelicenseexpirationdate_date","w_aakstatelicensenumber_string","w_aalstatelicenseexpirationdate_date","w_aalstatelicensenumber_string","w_aarstatelicenseexpirationdate_date","w_aarstatelicensenumber_string","w_aautoclaimsexperienceinyears_singlechoicelist","w_aavailabilitystatus_singlechoicelist","w_aazstatelicenseexpirationdate_date","w_aazstatelicensenumber_string","w_acarriercertifications_multiplechoicelist","w_acarriercertifications_multiplechoicelist_ft","w_acastatelicenseexpirationdate_date","w_acastatelicensenumber_string","w_aclaimpreferencetype_multiplechoicelist","w_aclaimpreferencetype_multiplechoicelist_ft","w_aclaimsdivision_singlechoicelist","w_acommercialclaimsexperienceinyears_singlechoicelist","w_actstatelicenseexpirationdate_date","w_actstatelicensenumber_string","w_acurrentassignment_singlechoicelist","w_adatelastautoclaimworked_date","w_adatelastcommercialclaimworked_date","w_adatelastliabilityclaimworked_date","w_adatelastresidentialclaimworked_date","w_adestatelicenseexpirationdate_date","w_adestatelicensenumber_string","w_adjusterid_string","w_aemail_email","w_aemail_email_ft","w_aestimatingplatforms_multiplechoicelist","w_aestimatingplatforms_multiplechoicelist_ft","w_aflstatelicenseexpirationdate_date","w_aflstatelicensenumber_string","w_agastatelicenseexpirationdate_date","w_agastatelicensenumber_string","w_agency_string","w_agencyemail_email","w_aging","w_ahistatelicenseexpirationdate_date","w_ahistatelicensenumber_string","w_aidstatelicenseexpirationdate_date","w_aidstatelicensenumber_string","w_aindustrycertifications_singlechoicelist","w_ainstatelicenseexpirationdate_date","w_ainstatelicensenumber_string","w_akystatelicenseexpirationdate_date","w_akystatelicensenumber_string","w_alanguages_multiplechoicelist","w_alanguages_multiplechoicelist_ft","w_alargestautoclaimlosshandled_string","w_alargestcommercialclaimlosshandled_string","w_alargestliabilityclaimlosshandled_string","w_alargestresidentialclaimlosshandled_string","w_alastatelicenseexpirationdate_date","w_alastatelicensenumber_string","w_aliabilityclaimsexperienceinyears_singlechoicelist","w_alicensedstate_multiplechoicelist","w_alicensedstate_multiplechoicelist_ft","w_alicensing_string","w_alternatephone_string","w_amastatelicenseexpirationdate_date","w_amastatelicensenumber_string","w_amistatelicenseexpirationdate_date","w_amistatelicensenumber_string","w_amnstatelicenseexpirationdate_date","w_amnstatelicensenumber_string","w_amobile_string","w_amsstatelicenseexpirationdate_date","w_amsstatelicensenumber_string","w_amtstatelicenseexpirationdate_date","w_amtstatelicensenumber_string","w_anfipexperienceyearsexperience_singlechoicelist","w_anhstatelicenseexpirationdate_date","w_anhstatelicensenumber_string","w_anmstatelicenseexpirationdate_date","w_anmstatelicensenumber_string","w_ansstatelicenseexpirationdate_date","w_ansstatelicensenumber_string","w_anystatelicenseexpirationdate_date","w_anystatelicensenumber_string","w_aokstatelicenseexpirationdate_date","w_aokstatelicensenumber_string","w_aorstatelicenseexpirationdate_date","w_aorstatelicensenumber_string","w_aphone_string","w_apropertyclaims_singlechoicelist","w_apublicadjusterexperience_date","w_apublicadjusterexperience_singlechoicelist","w_apublicadjusterexperiencelocation_multiplechoicelist","w_apublicadjusterexperiencelocation_multiplechoicelist_ft","w_aresidentialclaimsexperienceinyears_singlechoicelist","w_aristatelicenseexpirationdate_date","w_aristatelicensenumber_string","w_arolepreference_multiplechoicelist","w_arolepreference_multiplechoicelist_ft","w_ascstatelicenseexpirationdate_date","w_ascstatelicensenumber_string","w_asymbilityexperience_string","w_atotalautoclaimshandled_singlechoicelist","w_atotalcommercialclaimshandled_singlechoicelist","w_atotalliabilityclaimshandled_singlechoicelist","w_atotalresidentialclaimshandled_singlechoicelist","w_attachfiles_file","w_attachfiles_file_ft","w_attachmentName","w_attachmentName_ft","w_atxstatelicenseexpirationdate_date","w_atxstatelicensenumber_string","w_atypeofclaimshandled_multiplechoicelist","w_atypeofclaimshandled_multiplechoicelist_ft","w_autstatelicenseexpirationdate_date","w_autstatelicensenumber_string","w_avtstatelicenseexpirationdate_date","w_avtstatelicensenumber_string","w_awastatelicenseexpirationdate_date","w_awastatelicensenumber_string","w_awvstatelicenseexpirationdate_date","w_awvstatelicensenumber_string","w_awystatelicenseexpirationdate_date","w_awystatelicensenumber_string","w_axactanalysisuserid_text","w_axactimateexperience_string","w_axactnetaddress_text","w_carrierId","w_carrierName","w_carrierOrgId","w_carrierProduct","w_carrierState","w_carrierStatus","w_carriercontactemail_email","w_carriercontactname_string","w_carriercontactphone_string","w_cateventname_singlechoicelist","w_claimtype_singlechoicelist","w_closedDate","w_contactalternatephone_string","w_contactemail_email","w_contactemail_email_ft","w_contactname_firstname_string","w_contactname_lastname_string","w_contactphone_string","w_contacttitle_string","w_contractenddate_date","w_contractstartdate_date","w_contracttype_singlechoicelist","w_contracttypeother_string","w_createdDate","w_customeremail_email","w_customeremail_email_ft","w_customername_firstname_string","w_customername_lastname_string","w_customername_middlename_string","w_customerphone_string","w_datelastlitigationclaimworked_date","w_division_singlechoicelist","w_divisionother_string","w_expirationdate_date","w_fcnlicensenumber_string","w_filesTypes","w_filesTypes_ft","w_followers","w_followers_ft","w_group_string","w_hcicontactperson_string","w_hcientityparty_singlechoicelist","w_hcientitypartyother_string","w_id","w_idnumber_string","w_insurance_carrier_string","w_isunassigned","w_largestlitigationclaimlosshandled_string","w_lastModified","w_levelofdamage_singlechoicelist","w_litigationclaimsexperienceinyears_singlechoicelist","w_lossdate_date","w_losstype_singlechoicelist","w_mailingaddress_address1_text","w_mailingaddress_address2_text","w_mailingaddress_city_city","w_mailingaddress_country_country","w_mailingaddress_county_county","w_mailingaddress_state_state","w_mailingaddress_zip_zip","w_number","w_otherparty_string","w_physicaladdress_address1_text","w_physicaladdress_address2_text","w_physicaladdress_city_city","w_physicaladdress_country_country","w_physicaladdress_county_county","w_physicaladdress_state_state","w_physicaladdress_zip_zip","w_policyeffectivedate_date","w_policyexpirationdate_date","w_policyform_singlechoicelist","w_policynumber_string","w_policytype_singlechoicelist","w_propertycoordinates_geopoint","w_propertycoordinates_geopoint_ft","w_propertylocation_address1_text","w_propertylocation_address2_text","w_propertylocation_city_city","w_propertylocation_country_country","w_propertylocation_county_county","w_propertylocation_other_string","w_propertylocation_singlechoicelist","w_propertylocation_state_state","w_propertylocation_zip_zip","w_reopenReason","w_reopenedDate","w_reportedby_singlechoicelist","w_reporteddate_date","w_rooftarpingrequired_singlechoicelist","w_samsstatus_string","w_severity_singlechoicelist","w_sponsor","w_sponsorId","w_sponsorOrgId","w_status","w_subgroup_string","w_summary","w_templateType","w_title","w_totallitigationclaimshandled_singlechoicelist","w_track_singlechoicelist","w_treeremovalrequired_singlechoicelist","w_typeofautoclaimhandled_singlechoicelist","w_typeofcommercialclaimhandled_singlechoicelist","w_typeofliabilityclaimhandled_singlechoicelist","w_typeoflitigationclaimhandled_singlechoicelist","w_typeofresidentialclaimhandled_singlechoicelist","w_watermitigationrequired_singlechoicelist","w_websiteurl_string","w_windowboardingrequired_singlechoicelist","n_contactlettersentdate_date","w_dateofrepresentation_date","w_litigationcounty_singlechoicelist","w_casenumber_string","w_plaintifffirm_string","w_dateofservice_date","w_proofoflossorestimate_decimal","w_aob_singlechoicelist","w_aobcompany_string","w_dailyrepresentation_singlechoicelist","w_dailyrepresentationcompany_singlechoicelist","w_issue_singlechoicelist","w_datereceivedinclaims_date","w_litigationphase_singlechoicelist","w_initialdemand_decimal","w_globalsettlement_decimal","w_finalattorneyfees_decimal","w_finalindemnity_decimal","w_initialattorneyfees_decimal","w_initialindemnity_decimal","w_carrierclaimnumber_string","w_defensefirm_singlechoicelist","n_crncompletiondate_date","w_policystatus_singlechoicelist","w_constructiontype_singlechoicelist","w_shuttertypeopeningprotection_singlechoicelist","w_rooftyperoofgeometry_singlechoicelist","w_yearofconstruction_string","w_coveragea_string","w_agentname_string","w_agentemail_email","w_agentphone_string","n_invoiceamount_decimal","n_fainvoiceamount_decimal","a_floridabar_string","a_publicadjustercompany_string","a_multiplierocrequested_string","a_multiplieractualapplied_string","a_psdsubmittedby_singlechoicelist","a_plaintiffattorney_singlechoicelist","a_publicadjuster_singlechoicelist","a_coverageposition_singlechoicelist","a_presuitdetermination_singlechoicelist","a_psddemanddate_date","a_initialindemnityniportion_decimal","a_presuitdemandamount_decimal","a_presuitdemandattorneyfees_decimal","a_presuitoffer_decimal","a_finalindemnityaftertrial_decimal","a_finalattorneyfeesaftertrial_decimal","a_globalsettlementaftertrial_decimal","a_psdsettlementamount_decimal","a_feespaidtooc_decimal","a_costpaidtooc_decimal","n_psdinvalidreason_string","n_reinspectiontype_string","n_psdvalidaction_singlechoicelist","n_psdpaymentamount_decimal","n_responseduedate_date","n_claimantemailaddress_email","n_mediationappraisaldate_date","n_depositiondate_date","n_other_string","n_assignedto_singlechoicelist","n_vendorvendorspecialist_singlechoicelist","n_vendorcomparativeestimate_singlechoicelist","n_vendoremsvendorassignment_singlechoicelist","n_vendorengineer_singlechoicelist","n_vendorpeerreview_singlechoicelist","a_closedBy","a_closedById","a_policytype_singlechoicelist","a_policyform_singlechoicelist","n_psdinvalidreason_string_string","t_dueDate_timezone","a_dueDate_timezone","w_adatelastcommercialclaimworked_datetime","a_dateof1stcontact_datetime","a_datereceivedinclaims_datetime","n_crncompletiondate_datetime","w_expirationdate_datetime","w_aalstatelicenseexpirationdate_datetime","w_adatelastautoclaimworked_datetime","a_dateof1streport_datetime","w_ainstatelicenseexpirationdate_datetime","w_autstatelicenseexpirationdate_datetime","a_crnfileddate_datetime","a_dateofrepresentation_datetime","w_policyexpirationdate_datetime","w_aristatelicenseexpirationdate_datetime","w_anhstatelicenseexpirationdate_datetime","n_pretrialreportdate_datetime","n_depositiondate_datetime","n_dateletterreceived_datetime","n_dateoffinaldainvoice_datetime","w_adatelastresidentialclaimworked_datetime","w_policyeffectivedate_datetime","w_amastatelicenseexpirationdate_datetime","w_akystatelicenseexpirationdate_datetime","w_ahistatelicenseexpirationdate_datetime","w_amsstatelicenseexpirationdate_datetime","w_awastatelicenseexpirationdate_datetime","w_amnstatelicenseexpirationdate_datetime","w_adestatelicenseexpirationdate_datetime","w_contractstartdate_datetime","w_dateofservice_datetime","w_lossdate_datetime","w_aarstatelicenseexpirationdate_datetime","n_inspectionappointmentdate_datetime","w_awvstatelicenseexpirationdate_datetime","w_anmstatelicenseexpirationdate_datetime","w_agastatelicenseexpirationdate_datetime","w_aazstatelicenseexpirationdate_datetime","n_dateofexecutedrelease_datetime","n_responseduedate_datetime","n_dateofmediation_datetime","w_aflstatelicenseexpirationdate_datetime","n_managementconferencedate_datetime","a_dateofinspection_datetime","n_inspectiondate_datetime","w_aokstatelicenseexpirationdate_datetime","a_psddemanddate_datetime","n_dateofmotion_datetime","w_actstatelicenseexpirationdate_datetime","n_dateofnoticemisc_datetime","w_aidstatelicenseexpirationdate_datetime","w_ascstatelicenseexpirationdate_datetime","n_inspectedon_datetime","w_avtstatelicenseexpirationdate_datetime","w_awystatelicenseexpirationdate_datetime","w_anystatelicenseexpirationdate_datetime","w_amtstatelicenseexpirationdate_datetime","n_appointmentdaterescheduled_datetime","w_amistatelicenseexpirationdate_datetime","n_subsequentinspectiondate_datetime","n_contactlettersentdate_datetime","n_dateoforderentered_datetime","w_acastatelicenseexpirationdate_datetime","w_ansstatelicenseexpirationdate_datetime","a_dateofservice_datetime","n_euocompletedon_datetime","n_appointmentdatesubsequent_datetime","w_aakstatelicenseexpirationdate_datetime","n_mediationappraisaldate_datetime","w_apublicadjusterexperience_datetime","n_dateofmsj_datetime","n_dateofinspection_datetime","n_dateofsettlement_datetime","n_trialdate_datetime","w_datelastlitigationclaimworked_datetime","n_dateofrepresentation_datetime","n_euoscheduleddate_datetime","w_reporteddate_datetime","w_dateofrepresentation_datetime","a_crnduedate_datetime","w_alastatelicenseexpirationdate_datetime","w_aorstatelicenseexpirationdate_datetime","n_premediationreportdate_datetime","w_adatelastliabilityclaimworked_datetime","w_contractenddate_datetime","w_datereceivedinclaims_datetime","w_atxstatelicenseexpirationdate_datetime","w_adatelastcommercialclaimworked_timezone","a_dateof1stcontact_timezone","a_datereceivedinclaims_timezone","n_crncompletiondate_timezone","w_expirationdate_timezone","w_aalstatelicenseexpirationdate_timezone","w_adatelastautoclaimworked_timezone","a_dateof1streport_timezone","w_ainstatelicenseexpirationdate_timezone","w_autstatelicenseexpirationdate_timezone","a_crnfileddate_timezone","a_dateofrepresentation_timezone","w_policyexpirationdate_timezone","w_aristatelicenseexpirationdate_timezone","w_anhstatelicenseexpirationdate_timezone","n_pretrialreportdate_timezone","n_depositiondate_timezone","n_dateletterreceived_timezone","n_dateoffinaldainvoice_timezone","w_adatelastresidentialclaimworked_timezone","w_policyeffectivedate_timezone","w_amastatelicenseexpirationdate_timezone","w_akystatelicenseexpirationdate_timezone","w_ahistatelicenseexpirationdate_timezone","w_amsstatelicenseexpirationdate_timezone","w_awastatelicenseexpirationdate_timezone","w_amnstatelicenseexpirationdate_timezone","w_adestatelicenseexpirationdate_timezone","w_contractstartdate_timezone","w_dateofservice_timezone","w_lossdate_timezone","w_aarstatelicenseexpirationdate_timezone","n_inspectionappointmentdate_timezone","w_awvstatelicenseexpirationdate_timezone","w_anmstatelicenseexpirationdate_timezone","w_agastatelicenseexpirationdate_timezone","w_aazstatelicenseexpirationdate_timezone","n_dateofexecutedrelease_timezone","n_responseduedate_timezone","n_dateofmediation_timezone","w_aflstatelicenseexpirationdate_timezone","n_managementconferencedate_timezone","a_dateofinspection_timezone","n_inspectiondate_timezone","w_aokstatelicenseexpirationdate_timezone","a_psddemanddate_timezone","n_dateofmotion_timezone","w_actstatelicenseexpirationdate_timezone","n_dateofnoticemisc_timezone","w_aidstatelicenseexpirationdate_timezone","w_ascstatelicenseexpirationdate_timezone","n_inspectedon_timezone","w_avtstatelicenseexpirationdate_timezone","w_awystatelicenseexpirationdate_timezone","w_anystatelicenseexpirationdate_timezone","w_amtstatelicenseexpirationdate_timezone","n_appointmentdaterescheduled_timezone","w_amistatelicenseexpirationdate_timezone","n_subsequentinspectiondate_timezone","n_contactlettersentdate_timezone","n_dateoforderentered_timezone","w_acastatelicenseexpirationdate_timezone","w_ansstatelicenseexpirationdate_timezone","a_dateofservice_timezone","n_euocompletedon_timezone","n_appointmentdatesubsequent_timezone","w_aakstatelicenseexpirationdate_timezone","n_mediationappraisaldate_timezone","w_apublicadjusterexperience_timezone","n_dateofmsj_timezone","n_dateofinspection_timezone","n_dateofsettlement_timezone","n_trialdate_timezone","w_datelastlitigationclaimworked_timezone","n_dateofrepresentation_timezone","n_euoscheduleddate_timezone","w_reporteddate_timezone","w_dateofrepresentation_timezone","a_crnduedate_timezone","w_alastatelicenseexpirationdate_timezone","w_aorstatelicenseexpirationdate_timezone","n_premediationreportdate_timezone","w_adatelastliabilityclaimworked_timezone","w_contractenddate_timezone","w_datereceivedinclaims_timezone","w_atxstatelicenseexpirationdate_timezone","tz_property","tz_act_user","tz_note_user","n_offerdate_datetime","n_offerdate_timezone","n_counterofferamount_decimal","n_counterofferdate_datetime","n_counterofferdate_timezone","n_agreedsettlementamount_decimal","n_agreedsettlementdate_datetime","n_agreedsettlementdate_timezone","w_claimsource_string","w_availabilitystatus_singlechoicelist","w_currentassignment_singlechoicelist","w_claimsdivision_singlechoicelist","w_mobile_string","w_phone_string","w_email_email","n_requestedby_string","n_requestor_email","n_amount_decimal","n_requestdate_datetime","n_requestdate_timezone","n_approvedby_string","n_approveddate_datetime","n_approveddate_timezone","n_rejectedby_string","n_rejecteddate_datetime","n_rejecteddate_timezone","w_litigationworkkardnumber_string","w_sentfrom_string","w_sentto_string","w_subject_string","w_casetype_string","w_quotenumber_string","w_quotetype_singlechoicelist","a_casetype_string","a_sentto_string","a_sentfrom_string","n_sentfrom_string","n_subject_string","n_sentto_string","n_cc_string","n_recipient_string","n_datenoticereceive_datetime","n_datenoticereceive_timezone","p_cpmId","p_carrierName","p_source","n_mediationdate_datetime","n_mediationdate_timezone","n_appraisaldate_datetime","n_appraisaldate_timezone","n_mediationcompleteddate_datetime","n_mediationcompleteddate_timezone","n_appraisalcompleteddate_datetime","n_appraisalcompleteddate_timezone","n_mediationcancelleddate_datetime","n_mediationcancelleddate_timezone","n_appraisalcancelleddate_datetime","n_appraisalcancelleddate_timezone","n_csreason_singlechoicelist","w_claimsource_singlechoicelist","n_approvedby","a_requestcreated_datetime","a_requestcreated_timezone","w_csrclaimno_string","n_oldcasenumber_string","n_newcasenumber_string","n_oldcasetype_string","n_newcasetype_string","n_createddate_datetime","n_createddate_timezone","n_previouscontextnumber_string","n_newcontextnumber_string","n_previouscontexttype_string","n_newcontexttype_string","n_previouscasenumber_string","n_contextchangedon_datetime","n_contextchangedon_timezone","a_requestreceived_datetime","a_requestreceived_timezone","w_claimstatus_string","n_resonadtnalinfo_string","n_sfnreason_singlechoicelist","n_cmpltfilereason_singlechoicelist","w_agentcode_string","w_sponsorSupervisor","n_inspctionappointattdate_datetime","n_inspctionappointattdate_timezone","n_faappoinment_singlechoicelist","n_inspctioncompleteddate_datetime","n_inspctioncompleteddate_timezone","n_fafalwup_singlechoicelist","n_dateexecuted_datetime","n_dateexecuted_timezone","n_datereceived_datetime","n_datereceived_timezone","n_globalsettlementamount_decimal","n_documentaddedon_datetime","n_documentaddedon_timezone","n_documentname_string","n_mortgageename_string","n_numberofpolicies_string","w_reopenSubReason","n_emsfalwup_singlechoicelist","n_emsinspectioncompleteddate_datetime","n_emsinspectioncompleteddate_timezone","n_emsinspectionappointmentdate_datetime","n_emsinspectionappointmentdate_timezone","n_emsappoinment_singlechoicelist","w_primarylocation_singlechoicelist","w_locationnumber_string","w_numberofunits_number","w_buildingnumber_string","w_buildingdescription_string","w_buildinggroup_singlechoicelist","w_buildingtype_singlechoicelist","w_parentclaimnumber_string","w_parentclaim_singlechoicelist","w_policyversion_string","w_propertyphysicaladdresslatitude_string","w_propertyphysicaladdresslongitude_string","n_invoicenumber_string","n_amountinvoice_decimal","n_litinvoice_singlechoicelist","n_mailreceiveddate_datetime","n_mailreceiveddate_timezone","n_caseclosedon_datetime","n_caseclosedon_timezone","w_agencycode_string","n_adjustername_string","n_adjusterlicensenumber_string","n_letterreview3date_timezone","n_letterpublisher_string","n_letterreworkdate_datetime","n_lettercomposedate_timezone","n_letterreview2date_datetime","n_lettercomposedate_datetime","n_letterreview4date_datetime","n_letterreviewer2_string","n_letterrequestdate_datetime","n_letterreviewer1_string","n_letterauthor_string","n_letterreviewer3_string","n_letterreworkedby_string","n_lettertemplatename_string","n_letterreviewer4_string","n_letterreworkdate_timezone","n_letterrequestdate_timezone","n_letterpublishdate_datetime","n_letterreview1date_datetime","n_letterpublishdate_timezone","n_letterreview3date_datetime","n_letterreview1date_timezone","n_letterreview4date_timezone","n_letterreview2date_timezone","n_lettermailedby_string","n_lettermaildate_timezone","n_lettermaildate_datetime","a_mitigationtype_singlechoicelist","w_moldremediationrequired_singlechoicelist","w_smokecleaningrequired_singlechoicelist","a_specialservicestype_singlechoicelist","n_ssinspectiondate_datetime","n_ssinspectiondate_timezone","n_ssfollowupaction_singlechoicelist","n_ssinspectioncompleteddate_datetime","n_ssinspectioncompleteddate_timezone","n_ssappointmentattempt_singlechoicelist","n_ssinspectionappointmentattempteddate_datetime","n_ssinspectionappointmentattempteddate_timezone","w_csreason_singlechoicelist","n_reviewstatus_singlechoicelist","n_supervisorreviewreason_singlechoicelist","n_conveyedtoinsured_singlechoicelist","n_conveyedtoinsureddate_datetime","n_conveyedtoinsureddate_timezone","n_fareportdelayreason_singlechoicelist","n_emsreportdelayreason_singlechoicelist","n_ssreportdelayreason_singlechoicelist","n_estimaterequiredreason_singlechoicelist","w_litigationclosereason_singlechoicelist","n_lorreview_singlechoicelist","n_representativetype_singlechoicelist","n_paocname_string","n_paoclicenseorbar_string","n_paocfirmname_string","p_isActive","n_iccrecevieddate_datetime","n_iccrecevieddate_timezone","n_communicationstatus_singlechoicelist","w_plaintiffattorney_string","w_plaintiffattorneybarno_string","w_claimantname_string","p_approvedForPayments","p_approvedForPaymentDate","p_approvedForPaymentComment","a_isAssigneeAllActive","a_isOwnerActive","n_isCreatedByActive","n_isReviewedByActive","t_isOwnerActive","w_isSponsorActive","w_isSponsorSupervisorActive","w_publicadjuster_string","w_publicadjusterfirm_string","w_publicadjusterlic_string","w_assumptiondate_timezone","w_assumptiondate_datetime","a_emailsenton_datetime","a_emailsenton_timezone","a_cc_string","n_senton_datetime","n_senton_timezone","n_additionalinfo_string"];
+const GROUP_ORDER=[
+  {id:'w',label:'Workkard fields'},
+  {id:'a',label:'Activity fields'},
+  {id:'n',label:'Note fields'},
+  {id:'p',label:'Party fields'},
+  {id:'t',label:'Task fields'},
+  {id:'sys',label:'System fields'}
+];
+function fieldGroup(field){
+  if(field.startsWith('w_')||field==='w_Litigation_singlechoicelist')return 'w';
+  if(field.startsWith('a_'))return 'a';
+  if(field.startsWith('n_'))return 'n';
+  if(field.startsWith('p_'))return 'p';
+  if(field.startsWith('t_'))return 't';
+  return 'sys';
+}
+const CATS=GROUP_ORDER.map(group=>({
+  id:group.id,
+  label:group.label,
+  cols:SCHEMA_FIELDS.filter(field=>fieldGroup(field)===group.id)
+})).filter(group=>group.cols.length);
+function toKey(s){return s}
+const ALL_COLS=[];CATS.forEach(cat=>cat.cols.forEach(c=>ALL_COLS.push({key:c,label:c,cat:cat.id})));
+
+/* dimension candidates (categorical fields) */
+const DIM_KEYS=new Set(SCHEMA_FIELDS.filter(field=>/(_singlechoicelist|_multiplechoicelist|_status$|_type$|_city_city$|_state_state$|_county_county$|_country_country$|_title$|_grouping_|_reason_|_visibility$|_templateType$|_carrierState$|_carrierStatus$|_policytype_|_claimtype_|_losstype_|_track_|_severity_|_division_|_source_)/i.test(field)));
+const MONETARY=new Set(SCHEMA_FIELDS.filter(field=>/_decimal$/i.test(field)||/(amount|fees|indemnity|settlement|demand|invoice|premium|cost|loss|reserve|payable|coverage)/i.test(field)));
+const AGG_FNS=['Count','Count distinct','Sum','Average','Min','Max'];
+const GRAPH_FNS=['Count','Sum','Average','Min','Max'];
+const AGG={
+  'Count':v=>v.length,
+  'Count distinct':v=>new Set(v.filter(x=>x!=null).map(String)).size,
+  'Sum':v=>v.reduce((s,x)=>s+(Number(x)||0),0),
+  'Average':v=>v.length?v.reduce((s,x)=>s+(Number(x)||0),0)/v.filter(x=>x!=null).length:0,
+  'Min':v=>{const n=v.filter(x=>x!=null&&!isNaN(Number(x)));return n.length?Math.min(...n.map(Number)):0},
+  'Max':v=>{const n=v.filter(x=>x!=null&&!isNaN(Number(x)));return n.length?Math.max(...n.map(Number)):0}
+};
+
+/* schema-backed sample data */
+const STATUS=['Open','Closed','Pending','Under review','Rejected'];
+const LOSS=['Fire','Water','Wind','Theft','Mold','Litigation'];
+const STATES=['Florida','Texas','California','Georgia','North Carolina','Louisiana'];
+const CITIES=['Miami','Orlando','Tampa','Dallas','Houston','Atlanta','Charlotte','New Orleans'];
+const COUNTIES=['Miami-Dade','Orange','Hillsborough','Dallas','Harris','Fulton','Mecklenburg','Orleans'];
+const FIRST=['Ava','Liam','Noah','Emma','Olivia','Mason','Sophia','Lucas'];
+const LAST=['Carter','Diaz','Patel','Reed','Nguyen','Flores','Bennett','Howard'];
+const CARRIERS=['Citizens','State Farm','Allstate','Progressive','Universal','Tower Hill'];
+const TRACKS=['Litigation','Presuit','Property','EMS','Mediation'];
+const DEFENSE_FIRMS=['Cole Scott','Morgan & Morgan','Kubicki Draper','Hinshaw'];
+const ISSUES=['Coverage','Pricing','Estimate gap','Service delay','Liability'];
+const YESNO=['Yes','No'];
+const LETTER_TYPES=['Demand','Response','Inspection','Settlement'];
+const REVIEW_STATUS=['Not reviewed','In review','Reviewed','Approved'];
+const TIMEZONE='America/New_York';
+const CITY_COORDS={
+  Miami:[25.7617,-80.1918],
+  Orlando:[28.5383,-81.3792],
+  Tampa:[27.9506,-82.4572],
+  Dallas:[32.7767,-96.797],
+  Houston:[29.7604,-95.3698],
+  Atlanta:[33.749,-84.388],
+  Charlotte:[35.2271,-80.8431],
+  'New Orleans':[29.9511,-90.0715]
+};
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function pick(a){return a[rnd(0,a.length-1)]}
+function fd(d){return d.toISOString().slice(0,10)}
+function iso(d){return d.toISOString()}
+function fmtPhone(){return '+1-'+rnd(200,999)+'-'+rnd(200,999)+'-'+String(rnd(1000,9999))}
+function fmtEmail(first,last,domain='example.com'){return (first+'.'+last+'@'+domain).toLowerCase()}
+function choiceForField(field,ctx){
+  if(/status/i.test(field))return ctx.status;
+  if(/losstype|damage/i.test(field))return ctx.loss;
+  if(/claimtype/i.test(field))return pick(['Property','Litigation','Special services','Mediation']);
+  if(/policytype/i.test(field))return pick(['HO3','Commercial','Builder risk','Flood']);
+  if(/policyform/i.test(field))return pick(['Basic','Broad','Special']);
+  if(/track/i.test(field))return pick(TRACKS);
+  if(/severity/i.test(field))return pick(['Low','Moderate','High','Severe']);
+  if(/reason/i.test(field))return pick(['Pending docs','Inspection needed','Coverage review','Customer request']);
+  if(/lettertype/i.test(field))return pick(LETTER_TYPES);
+  if(/reviewstatus/i.test(field))return pick(REVIEW_STATUS);
+  if(/division/i.test(field))return pick(['Property','Litigation','Vendor','Inside desk']);
+  if(/county/i.test(field))return ctx.county;
+  if(/city/i.test(field))return ctx.city;
+  if(/state/i.test(field))return ctx.state;
+  if(/country/i.test(field))return 'USA';
+  if(/reportedby/i.test(field))return pick(['Insured','PA','Attorney','Carrier']);
+  if(/issue/i.test(field))return pick(ISSUES);
+  if(/defensefirm/i.test(field))return pick(DEFENSE_FIRMS);
+  if(/carrierstatus/i.test(field))return pick(['Active','Pending','Closed']);
+  if(/carrierproduct/i.test(field))return pick(['Homeowners','Commercial property','Flood']);
+  if(/priority/i.test(field))return pick(['Low','Normal','High']);
+  if(/visibility/i.test(field))return pick(['Internal','Shared']);
+  if(/language/i.test(field))return pick(['English','Spanish']);
+  if(/certification/i.test(field))return pick(['Xactimate','NFIP','HAAG']);
+  if(/type/i.test(field))return pick(['Primary','Secondary','Property','Note']);
+  if(/singlechoicelist|multiplechoicelist/i.test(field))return pick(['Yes','No','Pending','Required']);
+  return pick(YESNO);
+}
+function genFieldValue(field,ctx){
+  if(field==='all')return ctx.title+' | '+ctx.status;
+  if(field==='meta')return {source:'schema-demo',version:1};
+  if(field==='isWkshared')return Math.random()<0.3;
+  if(field.endsWith('_ft'))return [ctx.status,ctx.city];
+  if(/bigint_array/i.test(field))return [ctx.baseId,ctx.baseId+1];
+  if(/object_array/i.test(field))return [{name:'attachment',value:ctx.documentName}];
+  if(/_timezone$/i.test(field)||/^tz_/i.test(field))return TIMEZONE;
+  if(/(_date$|Date$|_datetime$)/i.test(field))return iso(new Date(ctx.baseDate.getTime()+rnd(0,18)*86400000));
+  if(/_decimal$/i.test(field))return rnd(5000,250000);
+  if(/(^|_)(id|templateid|communityid|orgid|sponsorid|ownerid|carrierid|sharedactivitywith|numberofunits_number)(_|$)/i.test(field)||field.endsWith('Id')||field.endsWith('OrgId'))return ctx.baseId+rnd(1,50);
+  if(/aging|overdue|estimate|count|number$/i.test(field))return rnd(0,120);
+  if(/email/i.test(field))return fmtEmail(ctx.first,ctx.last,field.includes('carrier')?'carrier.com':'example.com');
+  if(/phone|mobile/i.test(field))return fmtPhone();
+  if(/website/i.test(field))return 'https://'+ctx.last.toLowerCase()+'.example.com';
+  if(/zip/i.test(field))return String(rnd(32000,34999));
+  if(/geopoint/i.test(field))return ctx.coords[0]+','+ctx.coords[1];
+  if(/attachmentname/i.test(field))return ctx.documentName;
+  if(/attachfiles|filereference/i.test(field))return 'files/'+ctx.caseNo+'.pdf';
+  if(/casenumber|claimnumber|contextnumber|quotenumber|invoicenumber|numberofpolicies/i.test(field))return ctx.caseNo;
+  if(/policynumber|policyversion/i.test(field))return ctx.policyNo;
+  if(/title|subject/i.test(field))return ctx.title;
+  if(/summary|description|comment|additionalinfo|remarks|other|resolution/i.test(field))return ctx.summary;
+  if(/firstname/i.test(field))return ctx.first;
+  if(/lastname/i.test(field))return ctx.last;
+  if(/middlename/i.test(field))return 'J';
+  if(/legalname|organizationname|firmname|company|agency|carriername|mortgageename/i.test(field))return ctx.company;
+  if(/claimantname|contactname|owner|sponsor|reviewedby|createdby|approvedby|rejectedby|requestor|adjustername|attorney|publicadjuster|supervisor/i.test(field))return ctx.first+' '+ctx.last;
+  if(/license|barno|taxid|cpmid|accountid|reference|code|userid/i.test(field))return 'REF-'+(ctx.baseId+rnd(10,999));
+  if(/address1/i.test(field))return rnd(100,9999)+' Palm Ave';
+  if(/address2/i.test(field))return 'Suite '+rnd(100,900);
+  if(/city/i.test(field))return ctx.city;
+  if(/state/i.test(field))return ctx.state;
+  if(/county/i.test(field))return ctx.county;
+  if(/country/i.test(field))return 'USA';
+  if(/group|subgroup/i.test(field))return pick(['Alpha','Bravo','Coastal','Litigation']);
+  if(/carrier/i.test(field))return pick(CARRIERS);
+  if(/aob/i.test(field))return pick(['Executed','Not executed']);
+  if(/coverage/i.test(field))return pick(['Coverage A','Coverage B','Open']);
+  if(/status|choice|type|source|phase|party|location|division|severity|review|claimsdivision|assignment/i.test(field))return choiceForField(field,ctx);
+  return ctx.summary;
+}
+
+let DATA=[];
+(function(){let id=7000;
+  for(let y=2024;y<=2026;y++) for(let i=0;i<30;i++){
+    const status=pick(STATUS),loss=pick(LOSS),city=pick(CITIES),state=pick(STATES),county=pick(COUNTIES);
+    const first=pick(FIRST),last=pick(LAST),baseDate=new Date(y,rnd(0,11),rnd(1,28));
+    const baseId=++id;
+    const coords=CITY_COORDS[city]||[25.7617,-80.1918];
+    const caseNo='WK-'+y+'-'+String(baseId).padStart(5,'0');
+    const policyNo='POL-'+y+'-'+rnd(100000,999999);
+    const company=pick(CARRIERS)+' Claims';
+    const summary=loss+' claim for '+city+' handled in '+status+' status';
+    const title='Workkard '+caseNo;
+    const documentName='document-'+baseId+'.pdf';
+    const ctx={status,loss,city,state,county,first,last,baseDate,baseId,coords,caseNo,policyNo,company,summary,title,documentName};
+    const row=Object.fromEntries(SCHEMA_FIELDS.map(field=>[field,genFieldValue(field,ctx)]));
+    row.a_id=baseId+100000;
+    row.n_id=baseId+200000;
+    row.p_id=baseId+300000;
+    row.t_id=baseId+400000;
+    row.w_id=baseId;
+    row.w_status=status;
+    row.a_status=status;
+    row.t_status=status==='Closed'?'Completed':status;
+    row.w_title=title;
+    row.a_title='Activity for '+caseNo;
+    row.t_title='Task for '+caseNo;
+    row.w_casenumber_string=caseNo;
+    row.a_casenumber_string=caseNo;
+    row.w_csrclaimno_string='CSR-'+baseId;
+    row.w_carrierclaimnumber_string='CCN-'+baseId;
+    row.w_losstype_singlechoicelist=loss;
+    row.w_claimtype_singlechoicelist=pick(['Property','Litigation','EMS','Special services']);
+    row.w_policytype_singlechoicelist=pick(['HO3','Commercial','Flood']);
+    row.w_policynumber_string=policyNo;
+    row.w_carrierName=pick(CARRIERS);
+    row.w_carrierState=state;
+    row.w_claimstatus_string=status;
+    row.w_propertylocation_city_city=city;
+    row.w_propertylocation_state_state=state;
+    row.w_propertylocation_county_county=county;
+    row.w_propertylocation_country_country='USA';
+    row.w_propertylocation_zip_zip=String(rnd(32000,34999));
+    row.w_propertylocation_address1_text=rnd(100,9999)+' Palm Ave';
+    row.w_propertycoordinates_geopoint=coords[0]+','+coords[1];
+    row.w_reporteddate_datetime=iso(baseDate);
+    row.w_createdDate=iso(new Date(baseDate.getTime()-2*86400000));
+    row.w_lastModified=iso(new Date(baseDate.getTime()+5*86400000));
+    row.w_initialdemand_decimal=rnd(15000,350000);
+    row.w_globalsettlement_decimal=status==='Closed'?rnd(10000,280000):rnd(0,50000);
+    row.w_finalattorneyfees_decimal=rnd(3000,25000);
+    row.w_finalindemnity_decimal=rnd(10000,220000);
+    row.a_initialdemand_decimal=row.w_initialdemand_decimal;
+    row.a_globalsettlement_decimal=row.w_globalsettlement_decimal;
+    row.a_finalattorneyfees_decimal=row.w_finalattorneyfees_decimal;
+    row.a_finalindemnity_decimal=row.w_finalindemnity_decimal;
+    row.a_owner=first+' '+last;
+    row.a_assigneeAll=pick(['Desk A','Desk B','Desk C']);
+    row.a_dueDate=iso(new Date(baseDate.getTime()+7*86400000));
+    row.a_resolution=pick(['Open item','Waiting on docs','Resolved']);
+    row.n_summary_text=summary;
+    row.n_reviewstatus_singlechoicelist=pick(REVIEW_STATUS);
+    row.t_owner=first+' '+last;
+    row.t_priority=pick(['Low','Normal','High']);
+    row.t_dueDate=iso(new Date(baseDate.getTime()+10*86400000));
+    row.p_organizationName=company;
+    row.p_legalName=company;
+    row.p_contactName=first+' '+last;
+    row.p_email=fmtEmail(first,last);
+    DATA.push(row);
+  }
+})();
+
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+const DEFAULT_COLS=['w_id','w_casenumber_string','w_title','w_status','w_claimtype_singlechoicelist','w_losstype_singlechoicelist','w_propertylocation_city_city','w_globalsettlement_decimal'];
+let selCols=new Set(DEFAULT_COLS);
+let actFilters=[],filtData=[...DATA];
+let sortK='',sortD=1;
+let savedQ=[],drawerOpen=false,catOpen={};
+const STORE_KEYS={saved:'workkard_schema_saved_queries_v1',dashboards:'workkard_schema_dashboards_v1'};
+CATS.forEach(c=>catOpen[c.id]=false); catOpen['w']=true;
+let selectedRowIds=new Set(),activeView='table',rowActionMode='change';
+let map=null,mapMarkersLayer=null;
+let graphOpen=false,graphChart=null,graphConfig={active:false,type:'bar',dim:'',val:'count'};
+let activeUser='Alice',dashboards=[],activeDashboardId=null;
+const ROW_ACTION_MENUS={
+  add:[
+    {label:'Workkard Note',key:'n_summary_text',enabled:true},
+    {label:'Workkard Diary',key:'a_description',enabled:true},
+    {label:'Follow Workkard',key:'w_summary',enabled:true},
+    'sep',
+    {label:'Activity Note',key:'n_summary_text',enabled:false},
+    {label:'Activity Diary',key:'a_description',enabled:false},
+    {label:'Follow Activity',key:'n_summary_text',enabled:false},
+    {label:'Review Note',key:'n_reviewedComment',enabled:false}
+  ],
+  change:[
+    {label:'Workkard Owner',key:'a_owner',enabled:true},
+    {label:'Workkard Track',key:'w_track_singlechoicelist',enabled:false},
+    {label:'Workkard Litigation Phase',key:'w_litigationphase_singlechoicelist',enabled:false},
+    'sep',
+    {label:'Activity Owner',key:'a_owner',enabled:false},
+    {label:'Activity Assignee',key:'a_assigneeAll',enabled:false},
+    {label:'Activity Due Date',key:'a_dueDate',enabled:false},
+    {label:'Activity Resolution',key:'a_resolution',enabled:false,submenu:true},
+    'sep',
+    {label:'Diary Owner',key:'t_owner',enabled:false},
+    {label:'Diary Due Date',key:'t_dueDate',enabled:false},
+    {label:'Diary Priority',key:'t_priority',enabled:false},
+    {label:'Diary Status',key:'t_status',enabled:false,submenu:true}
+  ]
+};
+
+/* aggregation state */
+let aggOpen=false,aggDims=[],aggVals=[],aggActive=false;
+let aggSortK='',aggSortD=1,lastAggRows=null,lastAggCols=null;
+
+/* ═══════════════════════════════════════════
+   CELL FORMATTING
+═══════════════════════════════════════════ */
+function getV(row,key){
+  if(row[key]!==undefined)return row[key];
+  const lk=key.toLowerCase();
+  if(lk.includes('flag'))return pick(['Yes','No']);
+  if(lk.includes('amount')||lk.includes('cost'))return rnd(10000,500000);
+  if(lk.includes('days')||lk.includes('age'))return rnd(1,120);
+  return '—';
+}
+const LOSS_CLS={'Fire':'fire','Water':'water','Theft':'theft','Wind':'storm','Mold':'vandalism','Litigation':'earthquake'};
+const STAT_CLS={'Open':'open','Closed':'closed','Pending':'pending','Under review':'review','Rejected':'rejected'};
+function fmtCell(row,key){
+  const v=row[key]!==undefined?row[key]:getV(row,key);
+  if(v===null||v===undefined||v==='')return'—';
+  if(key==='w_losstype_singlechoicelist')return'<span class="bdg b-'+(LOSS_CLS[v]||'fire')+'">'+v+'</span>';
+  if(key==='w_status'||key==='a_status'||key==='t_status')return'<span class="bdg b-'+(STAT_CLS[v]||'open')+'">'+v+'</span>';
+  if(MONETARY.has(key)&&typeof v==='number')return'\u20B9'+v.toLocaleString('en-IN');
+  return String(v);
+}
+function fmtAggVal(val,colKey,fn){
+  if(val===null||val===undefined)return'—';
+  if(fn==='Count'||fn==='Count distinct')return Math.round(val).toLocaleString();
+  if(MONETARY.has(colKey))return'\u20B9'+Math.round(val).toLocaleString('en-IN');
+  if(/aging|overdue/i.test(colKey))return val.toFixed(1)+'d';
+  return typeof val==='number'?val.toFixed(1):String(val);
+}
+
+/* ═══════════════════════════════════════════
+   FILTERS
+═══════════════════════════════════════════ */
+function applyFilters(){
+  filtData=DATA.filter(row=>actFilters.every(f=>{
+    const rv=String(row[f.col]!=null?row[f.col]:'').toLowerCase(),fv=f.val.toLowerCase();
+    if(f.op==='equals')return rv===fv;
+    if(f.op==='contains')return rv.includes(fv);
+    if(f.op==='starts with')return rv.startsWith(fv);
+    if(f.op==='not equals')return rv!==fv;
+    if(f.op==='is empty')return!rv||rv==='—';
+    if(f.op==='is not empty')return rv&&rv!=='—';
+    if(f.op==='greater than')return parseFloat(rv)>parseFloat(fv);
+    if(f.op==='less than')return parseFloat(rv)<parseFloat(fv);
+    return true;
+  }));
+  renderCurrentView();
+  refreshGraphOptions();
+  updateRC();
+}
+function startAddFilter(){
+  const fc=document.getElementById('fform');if(fc.querySelector('.ff'))return;
+  const colOpts=CATS.map(cat=>'<optgroup label="'+cat.label+'">'+cat.cols.map(c=>'<option value="'+toKey(c)+'">'+c+'</option>').join('')+'</optgroup>').join('');
+  fc.innerHTML='<div class="ff"><select id="ffcol">'+colOpts+'</select><select id="ffop"><option>contains</option><option>equals</option><option>not equals</option><option>starts with</option><option>greater than</option><option>less than</option><option>is empty</option><option>is not empty</option></select><input type="text" id="ffval" placeholder="value\u2026"/><button class="btn sm pri" onclick="addFilter()">Add</button><button class="btn sm" onclick="document.getElementById(\'fform\').innerHTML=\'\'">&#10005;</button></div>';
+}
+function addFilter(){
+  const col=document.getElementById('ffcol').value,op=document.getElementById('ffop').value,val=document.getElementById('ffval').value;
+  const colLabel=ALL_COLS.find(c=>c.key===col)?.label||col;
+  actFilters.push({col,op,val,colLabel});
+  document.getElementById('fform').innerHTML='';renderChips();applyFilters();
+}
+function removeFilter(i){actFilters.splice(i,1);renderChips();applyFilters();}
+function renderChips(){
+  document.getElementById('fchips').innerHTML=actFilters.map((f,i)=>'<div class="chip">'+f.colLabel+' <span style="opacity:.6">'+f.op+'</span> '+(f.op.startsWith('is')?'':f.val)+'<span class="chip-x" onclick="removeFilter('+i+')">&#215;</span></div>').join('');
+}
+function toggleNaturalBar(){
+  const open=!document.getElementById('nl-bar').classList.contains('visible');
+  document.getElementById('nl-bar').classList.toggle('visible',open);
+  document.getElementById('nl-toggle-btn').classList.toggle('tog',open);
+  if(open)document.getElementById('nl-input').focus();
+}
+function clearNaturalQuery(){
+  document.getElementById('nl-input').value='';
+}
+function findColumnByPhrase(phrase){
+  const q=String(phrase||'').toLowerCase().trim().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ');
+  if(!q)return null;
+  const exact=ALL_COLS.find(c=>c.label.toLowerCase()===q||c.key===q.replace(/\s+/g,'_'));
+  if(exact)return exact;
+  const includes=ALL_COLS.find(c=>c.label.toLowerCase().includes(q)||q.includes(c.label.toLowerCase()));
+  if(includes)return includes;
+  const words=q.split(' ').filter(Boolean);
+  return ALL_COLS.find(c=>{
+    const lbl=c.label.toLowerCase();
+    return words.length>1&&words.every(w=>lbl.includes(w));
+  })||null;
+}
+function parseNaturalQuery(text){
+  const raw=String(text||'').trim();
+  const lower=raw.toLowerCase();
+  const out={filters:[],cols:[]};
+  if(!raw)return out;
+  const whereParts=lower.split(/\bwhere\b/);
+  const colPart=whereParts[0];
+  const filterPart=whereParts.slice(1).join(' where ');
+  const colMatch=colPart.match(/\b(show|select|include)\b(.+)/);
+  if(colMatch){
+    const colTokens=colMatch[2].split(/,|\band\b/).map(s=>s.replace(/\bcolumns?\b/g,'').trim()).filter(Boolean);
+    colTokens.forEach(tok=>{
+      const col=findColumnByPhrase(tok);
+      if(col&&!out.cols.includes(col.key))out.cols.push(col.key);
+    });
+  }
+  const clauseSource=filterPart||lower;
+  const clauses=clauseSource.split(/\band\b|,/).map(s=>s.trim()).filter(Boolean);
+  clauses.forEach(cl=>{
+    let m=cl.match(/(.+?)\s+is\s+not\s+(.+)/);
+    if(m){
+      const col=findColumnByPhrase(m[1]); if(col)out.filters.push({col:col.key,op:'not equals',val:m[2].trim(),colLabel:col.label});
+      return;
+    }
+    m=cl.match(/(.+?)\s+(greater than|more than|above|>)\s+(.+)/);
+    if(m){
+      const col=findColumnByPhrase(m[1]); if(col)out.filters.push({col:col.key,op:'greater than',val:m[3].trim(),colLabel:col.label});
+      return;
+    }
+    m=cl.match(/(.+?)\s+(less than|below|under|<)\s+(.+)/);
+    if(m){
+      const col=findColumnByPhrase(m[1]); if(col)out.filters.push({col:col.key,op:'less than',val:m[3].trim(),colLabel:col.label});
+      return;
+    }
+    m=cl.match(/(.+?)\s+starts with\s+(.+)/);
+    if(m){
+      const col=findColumnByPhrase(m[1]); if(col)out.filters.push({col:col.key,op:'starts with',val:m[2].trim(),colLabel:col.label});
+      return;
+    }
+    m=cl.match(/(.+?)\s+contains\s+(.+)/);
+    if(m){
+      const col=findColumnByPhrase(m[1]); if(col)out.filters.push({col:col.key,op:'contains',val:m[2].trim(),colLabel:col.label});
+      return;
+    }
+    m=cl.match(/(.+?)\s+(is|equals|equal to)\s+(.+)/);
+    if(m){
+      const col=findColumnByPhrase(m[1]); if(col)out.filters.push({col:col.key,op:'equals',val:m[3].trim(),colLabel:col.label});
+      return;
+    }
+    const statusVal=['open','closed','pending','under review','rejected'].find(v=>cl.includes(v));
+    if(statusVal&&cl.includes('status'))out.filters.push({col:'w_status',op:'equals',val:statusVal,colLabel:'w_status'});
+  });
+  return out;
+}
+function runNaturalQuery(){
+  const txt=document.getElementById('nl-input').value.trim();
+  if(!txt){alert('Enter a request in plain English.');return;}
+  const parsed=parseNaturalQuery(txt);
+  if(!parsed.filters.length&&!parsed.cols.length){
+    alert('Could not understand the request. Try format: show w_casenumber_string, w_status where w_status is open');
+    return;
+  }
+  actFilters=parsed.filters;
+  if(parsed.cols.length)selCols=new Set(parsed.cols);
+  document.getElementById('fform').innerHTML='';
+  renderChips();
+  clearAgg();
+  clearGraph();
+  renderDrawer();
+  applyFilters();
+}
+function resetAll(){
+  actFilters=[];renderChips();document.getElementById('fform').innerHTML='';
+  selCols=new Set(DEFAULT_COLS);filtData=[...DATA];sortK='';sortD=1;
+  clearAgg();clearGraph();renderDrawer();renderCurrentView();updateRC();
+}
+function updateRC(){
+  if(aggActive){
+    document.getElementById('rc').textContent=filtData.length+' records \u2192 '+(lastAggRows?lastAggRows.length:0)+' groups';
+  } else {
+    document.getElementById('rc').textContent='Showing '+filtData.length+' of '+DATA.length+' records';
+  }
+}
+
+/* ═══════════════════════════════════════════
+   RAW TABLE RENDER
+═══════════════════════════════════════════ */
+function renderRawTable(){
+  const tbl=document.getElementById('main-table');
+  tbl.className='raw-tbl';
+  const cols=[...selCols].map(k=>ALL_COLS.find(c=>c.key===k)).filter(Boolean);
+  const allVisibleSelected=!!filtData.length&&filtData.every(r=>selectedRowIds.has(String(r.w_id)));
+  document.getElementById('thead').innerHTML='<tr><th class="chk"><input type="checkbox" '+(allVisibleSelected?'checked':'')+' onchange="toggleSelectAllRows(this.checked)"></th>'+cols.map((c,i)=>'<th class="'+(i===0?'sc sel-sc':'')+'" onclick="sortBy(\''+c.key+'\')">'+c.label+'<span class="si '+(sortK===c.key?'on':'')+'">'+( sortK===c.key?(sortD===1?'&#9650;':'&#9660;'):'&#8645;')+'</span></th>').join('')+'</tr>';
+  const rows=[...filtData];
+  if(sortK)rows.sort((a,b)=>{const av=a[sortK]??'',bv=b[sortK]??'';return typeof av==='number'&&typeof bv==='number'?(av-bv)*sortD:String(av).localeCompare(String(bv))*sortD});
+  if(!rows.length){document.getElementById('tbody').innerHTML='<tr><td colspan="'+(cols.length+1)+'" style="text-align:center;padding:40px;color:var(--tx2)">No records match your filters.</td></tr>';syncSelectionState();return;}
+  document.getElementById('tbody').innerHTML=rows.map(r=>{
+    const isSel=selectedRowIds.has(String(r.w_id));
+    return'<tr class="'+(isSel?'sel':'')+'"><td class="chk"><input type="checkbox" '+(isSel?'checked':'')+' onchange="toggleRowSelection(\''+r.w_id+'\',this.checked)"></td>'+cols.map((c,i)=>'<td class="'+(i===0?'sc sel-sc':'')+'">'+fmtCell(r,c.key)+'</td>').join('')+'</tr>';
+  }).join('');
+  document.getElementById('cpill').textContent=selCols.size;
+  const di=document.getElementById('drinf');if(di)di.textContent=selCols.size+' of '+ALL_COLS.length+' selected';
+  syncSelectionState();
+}
+function sortBy(k){sortK===k?sortD*=-1:(sortK=k,sortD=1);renderRawTable();}
+
+/* ═══════════════════════════════════════════
+   AGGREGATION
+═══════════════════════════════════════════ */
+function toggleAggBar(){
+  aggOpen=!aggOpen;
+  document.getElementById('agg-bar').classList.toggle('visible',aggOpen);
+  document.getElementById('agg-toggle-btn').classList.toggle('tog',aggOpen);
+}
+function toggleGraphBar(){
+  graphOpen=!graphOpen;
+  document.getElementById('graph-bar').classList.toggle('visible',graphOpen);
+  document.getElementById('graph-toggle-btn').classList.toggle('tog',graphOpen);
+  if(graphOpen)refreshGraphOptions();
+}
+
+function showAggForm(type){
+  if(type==='dim'){
+    const el=document.getElementById('agg-dim-form');if(el.innerHTML)return;
+    /* show all columns as potential group-by; highlight dims first */
+    const dimOpts=CATS.map(cat=>'<optgroup label="'+cat.label+'">'+cat.cols.map(c=>'<option value="'+toKey(c)+'">'+c+'</option>').join('')+'</optgroup>').join('');
+    el.innerHTML='<div class="agg-inline-form"><select id="adf">'+dimOpts+'</select><button class="agg-run" style="font-size:11px;padding:2px 8px" onclick="addAggDim()">Add</button><button class="agg-clear" onclick="document.getElementById(\'agg-dim-form\').innerHTML=\'\'">&#10005;</button></div>';
+  } else {
+    const el=document.getElementById('agg-val-form');if(el.innerHTML)return;
+    const metOpts=ALL_COLS.map(c=>'<option value="'+c.key+'">'+c.label+'</option>').join('');
+    const fnOpts=AGG_FNS.map(f=>'<option>'+f+'</option>').join('');
+    el.innerHTML='<div class="agg-inline-form"><select id="avf" style="max-width:130px">'+metOpts+'</select><select id="aff" style="max-width:100px">'+fnOpts+'</select><button class="agg-run" style="font-size:11px;padding:2px 8px" onclick="addAggVal()">Add</button><button class="agg-clear" onclick="document.getElementById(\'agg-val-form\').innerHTML=\'\'">&#10005;</button></div>';
+  }
+}
+function addAggDim(){
+  const k=document.getElementById('adf').value;
+  const label=ALL_COLS.find(c=>c.key===k)?.label||k;
+  if(!aggDims.find(d=>d.key===k))aggDims.push({key:k,label});
+  document.getElementById('agg-dim-form').innerHTML='';renderAggChips();
+}
+function addAggVal(){
+  const k=document.getElementById('avf').value,fn=document.getElementById('aff').value;
+  const label=ALL_COLS.find(c=>c.key===k)?.label||k;
+  aggVals.push({key:k,label,fn,id:Date.now()});
+  document.getElementById('agg-val-form').innerHTML='';renderAggChips();
+}
+function removeAggDim(k){aggDims=aggDims.filter(d=>d.key!==k);renderAggChips();if(aggActive)runAgg();}
+function removeAggVal(id){aggVals=aggVals.filter(v=>v.id!==id);renderAggChips();if(aggActive)runAgg();}
+function renderAggChips(){
+  document.getElementById('agg-dim-chips').innerHTML=aggDims.map(d=>'<span class="ac ac-dim">'+d.label+'<span class="ac-x" onclick="removeAggDim(\''+d.key+'\')">&#215;</span></span>').join('') || '<span style="font-size:11px;color:var(--tx3)">none</span>';
+  document.getElementById('agg-val-chips').innerHTML=aggVals.map(v=>'<span class="ac ac-val"><span class="ac-fn">'+v.fn+'</span>'+v.label+'<span class="ac-x" onclick="removeAggVal('+v.id+')">&#215;</span></span>').join('') || '<span style="font-size:11px;color:var(--tx3)">none</span>';
+}
+
+function runAgg(){
+  if(!aggDims.length){alert('Add at least one "Group by" field.');return;}
+  if(!aggVals.length){alert('Add at least one value metric.');return;}
+  aggActive=true;aggSortK='';aggSortD=1;
+  document.getElementById('agg-mode-badge').style.display='';
+  computeAndRenderAgg();updateRC();
+  refreshGraphOptions();
+}
+
+function computeAndRenderAgg(sk,sd){
+  const gmap={};
+  filtData.forEach(row=>{
+    const key=aggDims.map(d=>String(row[d.key]!=null?row[d.key]:'—')).join('\x00');
+    if(!gmap[key])gmap[key]={rv:aggDims.map(d=>String(row[d.key]!=null?row[d.key]:'—')),rows:[]};
+    gmap[key].rows.push(row);
+  });
+  let rows=Object.values(gmap).map(g=>{
+    const out={_rv:g.rv,_n:g.rows.length};
+    aggVals.forEach(vf=>{out[vf.key+'|'+vf.fn]=AGG[vf.fn](g.rows.map(r=>r[vf.key]));});
+    return out;
+  });
+  /* sort */
+  if(sk){rows.sort((a,b)=>{const av=a[sk]??0,bv=b[sk]??0;return typeof av==='number'&&typeof bv==='number'?(av-bv)*(sd||1):String(av).localeCompare(String(bv))*(sd||1);});}
+  lastAggRows=rows;lastAggCols=aggVals;
+  renderAggTable(rows);
+}
+
+function renderAggTable(rows){
+  const tbl=document.getElementById('main-table');
+  tbl.className='agg-tbl';
+
+  /* totals row */
+  const tot={_rv:['Grand total'],_n:filtData.length,_T:true};
+  aggVals.forEach(vf=>{tot[vf.key+'|'+vf.fn]=AGG[vf.fn](filtData.map(r=>r[vf.key]));});
+
+  /* thead */
+  const dimHdrs=aggDims.map(d=>'<th class="dim-h">'+d.label+'</th>').join('');
+  const valHdrs=aggVals.map(vf=>'<th class="met-h" onclick="aggSortBy(\''+vf.key+'|'+vf.fn+'\')">'+vf.fn+' &middot; '+vf.label+'<span class="si '+(aggSortK===vf.key+'|'+vf.fn?'on':'')+'">'+( aggSortK===vf.key+'|'+vf.fn?(aggSortD===1?'&#9650;':'&#9660;'):'&#8645;')+'</span></th>').join('');
+  document.getElementById('thead').innerHTML='<tr>'+dimHdrs+valHdrs+'</tr>';
+
+  /* rows */
+  function mkRow(row,isT){
+    const dimCells=isT
+      ?'<td class="dim-c" colspan="'+aggDims.length+'"><strong>Grand total</strong></td>'
+      :row._rv.map(v=>'<td class="dim-c">'+v+'</td>').join('');
+    const valCells=aggVals.map(vf=>'<td class="met-c">'+fmtAggVal(row[vf.key+'|'+vf.fn],vf.key,vf.fn)+'</td>').join('');
+    return'<tr class="'+(isT?'tot':'')+'" '+(isT?'':'onclick="drillRow(this)"')+'>'+dimCells+valCells+'</tr>';
+  }
+  document.getElementById('tbody').innerHTML=
+    (rows.length?rows.map(r=>mkRow(r,false)).join(''):'<tr><td colspan="'+(aggDims.length+aggVals.length)+'" style="text-align:center;padding:40px;color:var(--tx2)">No groups found.</td></tr>')+
+    mkRow(tot,true);
+}
+
+function aggSortBy(k){aggSortK===k?aggSortD*=-1:(aggSortK=k,aggSortD=1);computeAndRenderAgg(aggSortK,aggSortD);}
+
+/* Drill-down: click a group row to filter raw data to that group */
+function drillRow(tr){
+  const cells=[...tr.querySelectorAll('td.dim-c')].map(td=>td.textContent.trim());
+  const dims=[...aggDims];
+  clearAgg();
+  cells.forEach((val,i)=>{
+    if(i>=dims.length)return;
+    const d=dims[i];
+    actFilters.push({col:d.key,op:'equals',val,colLabel:d.label});
+  });
+  renderChips();applyFilters();
+}
+
+function clearAgg(){
+  aggActive=false;aggDims=[];aggVals=[];aggSortK='';aggSortD=1;lastAggRows=null;lastAggCols=null;
+  document.getElementById('agg-dim-form').innerHTML='';
+  document.getElementById('agg-val-form').innerHTML='';
+  document.getElementById('agg-mode-badge').style.display='none';
+  renderAggChips();renderCurrentView();updateRC();
+  refreshGraphOptions();
+}
+
+function refreshGraphOptions(){
+  const dimEl=document.getElementById('graph-dim'),valEl=document.getElementById('graph-val');
+  if(!dimEl||!valEl)return;
+  if(aggActive&&aggDims.length&&aggVals.length){
+    dimEl.innerHTML=aggDims.map(d=>'<option value="'+d.key+'">'+d.label+'</option>').join('');
+    valEl.innerHTML=aggVals.map(v=>'<option value="'+v.key+'|'+v.fn+'">'+v.fn+' · '+v.label+'</option>').join('');
+    if(!aggDims.some(d=>d.key===graphConfig.dim))graphConfig.dim=aggDims[0].key;
+    if(!aggVals.some(v=>(v.key+'|'+v.fn)===graphConfig.val))graphConfig.val=aggVals[0].key+'|'+aggVals[0].fn;
+    dimEl.value=graphConfig.dim;
+    valEl.value=graphConfig.val;
+    return;
+  }
+  const dimCandidates=ALL_COLS.filter(c=>DIM_KEYS.has(c.key)||selCols.has(c.key)).slice(0,80);
+  const metricCandidates=ALL_COLS.filter(c=>MONETARY.has(c.key)||c.key.includes('days')||c.key.includes('score')||c.key.includes('amount')).slice(0,60);
+  dimEl.innerHTML=dimCandidates.map(c=>'<option value="'+c.key+'">'+c.label+'</option>').join('');
+  valEl.innerHTML='<option value="count">Count of records</option>'+metricCandidates.flatMap(c=>GRAPH_FNS.map(fn=>'<option value="'+c.key+'|'+fn+'">'+fn+' · '+c.label+'</option>')).join('');
+  if(!dimCandidates.some(c=>c.key===graphConfig.dim))graphConfig.dim=(dimCandidates[0]?.key)||'w_status';
+  const rawVals=['count'].concat(metricCandidates.flatMap(c=>GRAPH_FNS.map(fn=>c.key+'|'+fn)));
+  if(!rawVals.includes(graphConfig.val))graphConfig.val='count';
+  dimEl.value=graphConfig.dim;
+  valEl.value=graphConfig.val;
+}
+function runGraph(){
+  graphConfig.type=document.getElementById('graph-type').value;
+  graphConfig.dim=document.getElementById('graph-dim').value;
+  graphConfig.val=document.getElementById('graph-val').value;
+  const spec=aggActive?buildAggGraphSpec():buildRawGraphSpec();
+  if(!spec.labels.length){alert('Not enough data to create a graph.');return;}
+  graphConfig.active=true;
+  renderGraph(spec);
+}
+function buildRawGraphSpec(){
+  const groups={};
+  filtData.forEach(row=>{
+    const key=String(row[graphConfig.dim]??'—');
+    if(!groups[key])groups[key]=[];
+    groups[key].push(row);
+  });
+  let entries=Object.entries(groups).map(([label,rows])=>{
+    if(graphConfig.val==='count')return {label,value:rows.length};
+    const [metricKey,fn]=graphConfig.val.split('|');
+    return {label,value:AGG[fn](rows.map(r=>r[metricKey]))};
+  }).sort((a,b)=>b.value-a.value).slice(0,12);
+  return {
+    labels:entries.map(e=>e.label),
+    values:entries.map(e=>e.value),
+    title:ALL_COLS.find(c=>c.key===graphConfig.dim)?.label||graphConfig.dim,
+    subtitle:graphConfig.val==='count'?'Count of records':graphConfig.val.split('|')[1]+' · '+(ALL_COLS.find(c=>c.key===graphConfig.val.split('|')[0])?.label||graphConfig.val)
+  };
+}
+function buildAggGraphSpec(){
+  if(!lastAggRows||!lastAggRows.length)return {labels:[],values:[],title:'',subtitle:''};
+  const idx=aggDims.findIndex(d=>d.key===graphConfig.dim);
+  const meta=aggVals.find(v=>(v.key+'|'+v.fn)===graphConfig.val);
+  const entries=lastAggRows.map(row=>({label:idx>=0?row._rv[idx]:'Group',value:Number(row[graphConfig.val]??0)})).slice(0,12);
+  return {
+    labels:entries.map(e=>e.label),
+    values:entries.map(e=>e.value),
+    title:aggDims.find(d=>d.key===graphConfig.dim)?.label||graphConfig.dim,
+    subtitle:meta?(meta.fn+' · '+meta.label):graphConfig.val
+  };
+}
+function renderGraph(spec){
+  const card=document.getElementById('graph-card'),canvas=document.getElementById('graph-canvas'),empty=document.getElementById('graph-empty');
+  document.getElementById('graph-title').textContent=spec.title;
+  document.getElementById('graph-subtitle').textContent=spec.subtitle+(aggActive?' · Aggregated view':' · Query result');
+  card.classList.add('visible');
+  empty.style.display='none';
+  canvas.style.display='block';
+  if(graphChart)graphChart.destroy();
+  const type=graphConfig.type;
+  graphChart=new Chart(canvas,{
+    type,
+    data:{
+      labels:spec.labels,
+      datasets:[{
+        label:spec.subtitle,
+        data:spec.values,
+        borderColor:'#378ADD',
+        backgroundColor:type==='line'?'rgba(55,138,221,.15)':['rgba(55,138,221,.88)','rgba(24,95,165,.84)','rgba(15,110,86,.78)','rgba(83,74,183,.78)','rgba(133,79,11,.78)','rgba(153,60,29,.78)','rgba(61,109,17,.74)','rgba(153,53,86,.72)','rgba(45,160,117,.72)','rgba(107,107,107,.68)','rgba(102,146,194,.72)','rgba(33,85,135,.72)'],
+        tension:.28,
+        fill:type==='line',
+        borderWidth:2,
+        pointRadius:type==='line'?3:0
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{display:type==='pie'||type==='doughnut'}},
+      scales:(type==='pie'||type==='doughnut')?{}:{
+        y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#6b6b6b'}},
+        x:{grid:{display:false},ticks:{color:'#6b6b6b'}}
+      }
+    }
+  });
+}
+function clearGraph(){
+  graphConfig.active=false;
+  document.getElementById('graph-card').classList.remove('visible');
+  if(graphChart){graphChart.destroy();graphChart=null;}
+}
+
+function toggleRowSelection(id,checked){
+  if(checked)selectedRowIds.add(id);else selectedRowIds.delete(id);
+  if(activeView==='table'&&!aggActive)renderRawTable();else syncSelectionState();
+}
+function toggleSelectAllRows(checked){
+  filtData.forEach(r=>checked?selectedRowIds.add(String(r.w_id)):selectedRowIds.delete(String(r.w_id)));
+  renderCurrentView();
+}
+function clearSelectedRows(){
+  selectedRowIds.clear();
+  closeRowMenus();
+  closeRowActionForm();
+  renderCurrentView();
+}
+function syncSelectionState(){
+  const count=selectedRowIds.size;
+  const bar=document.getElementById('row-actions');
+  const meta=document.getElementById('row-actions-meta');
+  bar.classList.toggle('visible',count>0&&activeView==='table'&&!aggActive);
+  meta.textContent=count+' record'+(count===1?'':'s')+' selected';
+}
+function openRowAction(mode,key,label){
+  rowActionMode=mode;
+  const opts=ALL_COLS.map(c=>'<option value="'+c.key+'" '+(c.key===key?'selected':'')+'>'+c.label+'</option>').join('');
+  document.getElementById('row-action-col').innerHTML=opts;
+  document.getElementById('row-action-label').textContent=(mode==='add'?'Add ':'Change ')+(label||'value')+':';
+  document.getElementById('row-action-val').value='';
+  document.getElementById('row-action-form').classList.add('visible');
+}
+function closeRowActionForm(){
+  document.getElementById('row-action-form').classList.remove('visible');
+}
+function renderRowMenus(){
+  ['add','change'].forEach(mode=>{
+    const el=document.getElementById('row-menu-'+mode);
+    el.innerHTML=ROW_ACTION_MENUS[mode].map(item=>{
+      if(item==='sep')return '<div class="row-menu-sep"></div>';
+      const cls='row-menu-item'+(item.enabled?'':' dis');
+      const icon=item.submenu?'<span class="sub">&#9654;</span>':'';
+      const click=item.enabled?'onclick="chooseRowAction(\''+mode+'\',\''+item.key+'\',\''+item.label.replace(/'/g,"\\'")+'\')"':'';
+      return '<button class="'+cls+'" '+click+'>'+item.label+icon+'</button>';
+    }).join('');
+  });
+}
+function toggleRowMenu(mode,event){
+  if(event)event.stopPropagation();
+  const el=document.getElementById('row-menu-'+mode);
+  const shouldOpen=!el.classList.contains('open');
+  closeRowMenus();
+  if(shouldOpen)el.classList.add('open');
+}
+function closeRowMenus(){
+  document.querySelectorAll('.row-menu').forEach(el=>el.classList.remove('open'));
+}
+function chooseRowAction(mode,key,label){
+  closeRowMenus();
+  openRowAction(mode,key,label);
+}
+function applyRowAction(){
+  const key=document.getElementById('row-action-col').value;
+  const rawVal=document.getElementById('row-action-val').value.trim();
+  if(!key||!selectedRowIds.size)return;
+  DATA=DATA.map(row=>{
+    if(!selectedRowIds.has(String(row.w_id)))return row;
+    const next={...row};
+    if(rowActionMode==='change'){
+      next[key]=coerceValue(key,rawVal);
+      return next;
+    }
+    const current=next[key];
+    if(typeof current==='number'&&!isNaN(Number(rawVal))){
+      next[key]=current+Number(rawVal);
+    }else if(current==null||current===''||current==='—'){
+      next[key]=coerceValue(key,rawVal);
+    }else{
+      next[key]=String(current)+' | '+rawVal;
+    }
+    return next;
+  });
+  closeRowActionForm();
+  applyFilters();
+  renderCurrentView();
+}
+function coerceValue(key,val){
+  if(val==='')return '';
+  if(MONETARY.has(key)||key.includes('days')||key.includes('count')||key.includes('_%')||key.includes('score')||key.includes('age'))return Number(val);
+  return val;
+}
+
+function switchView(view){
+  activeView=view;
+  document.getElementById('view-table-btn').classList.toggle('on',view==='table');
+  document.getElementById('view-map-btn').classList.toggle('on',view==='map');
+  document.getElementById('tbl-wrap').style.display=view==='table'?'block':'none';
+  document.getElementById('map-wrap').classList.toggle('active',view==='map');
+  if(view!=='table')closeRowMenus();
+  syncSelectionState();
+  if(view==='map')renderMap();
+}
+function initMap(){
+  if(map||typeof L==='undefined')return;
+  map=L.map('claims-map',{zoomControl:true}).setView([22.5,79],5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    maxZoom:18,
+    attribution:'&copy; OpenStreetMap contributors'
+  }).addTo(map);
+  mapMarkersLayer=L.layerGroup().addTo(map);
+}
+function renderMap(){
+  const wrap=document.getElementById('map-wrap');
+  const empty=document.getElementById('map-empty');
+  const mapEl=document.getElementById('claims-map');
+  if(activeView!=='map')return;
+  if(typeof L==='undefined'){
+    mapEl.style.display='none';
+    empty.style.display='flex';
+    empty.textContent='Map could not be loaded in this session.';
+    return;
+  }
+  initMap();
+  mapMarkersLayer.clearLayers();
+  const grouped={};
+  filtData.forEach(row=>{
+    const coords=CITY_COORDS[row.w_propertylocation_city_city];
+    if(!coords)return;
+    const key=row.w_propertylocation_city_city;
+    if(!grouped[key])grouped[key]={coords,city:key,rows:[]};
+    grouped[key].rows.push(row);
+  });
+  const groups=Object.values(grouped);
+  if(!groups.length){
+    mapEl.style.display='none';
+    empty.style.display='flex';
+    empty.textContent='No mappable rows are available for the current filters.';
+    return;
+  }
+  mapEl.style.display='block';
+  empty.style.display='none';
+  const bounds=[];
+  groups.forEach(group=>{
+    const [lat,lng]=group.coords;
+    const marker=L.circleMarker([lat,lng],{
+      radius:Math.min(18,6+group.rows.length),
+      color:'#185FA5',
+      fillColor:'#378ADD',
+      fillOpacity:.75,
+      weight:1.5
+    }).bindPopup('<strong>'+group.city+'</strong><br>'+group.rows.length+' workkards<br>Open: '+group.rows.filter(r=>r.w_status==='Open').length+'<br>Closed: '+group.rows.filter(r=>r.w_status==='Closed').length);
+    marker.addTo(mapMarkersLayer);
+    bounds.push([lat,lng]);
+  });
+  map.invalidateSize();
+  if(bounds.length===1)map.setView(bounds[0],7);else map.fitBounds(bounds,{padding:[30,30]});
+}
+function renderCurrentView(){
+  if(aggActive){
+    computeAndRenderAgg(aggSortK,aggSortD);
+  }else{
+    renderRawTable();
+  }
+  if(activeView==='map')renderMap();
+  if(graphConfig.active)runGraph();
+}
+
+/* ═══════════════════════════════════════════
+   EXPORT
+═══════════════════════════════════════════ */
+function doExport(){
+  if(aggActive&&lastAggRows){exportAgg();}else{exportRaw();}
+}
+function exportRaw(){
+  const cols=[...selCols].map(k=>ALL_COLS.find(c=>c.key===k)).filter(Boolean);
+  const hdr=cols.map(c=>c.label).join(',');
+  const body=filtData.map(r=>cols.map(c=>{const v=r[c.key]!=null?r[c.key]:getV(r,c.key);const s=String(v===null?'':v);return s.includes(',')?'"'+s+'"':s;}).join(',')).join('\n');
+  dl(hdr+'\n'+body,'workkards_export.csv');
+}
+function exportAgg(){
+  const hdrs=aggDims.map(d=>d.label).concat(lastAggCols.map(v=>v.fn+' - '+v.label));
+  const body=lastAggRows.map(r=>r._rv.concat(lastAggCols.map(v=>r[v.key+'|'+v.fn]??'')).join(',')).join('\n');
+  dl(hdrs.join(',')+'\n'+body,'workkards_aggregated.csv');
+}
+function dl(txt,name){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv'}));a.download=name;a.click();}
+
+/* ═══════════════════════════════════════════
+   COLUMN DRAWER
+═══════════════════════════════════════════ */
+function toggleDrawer(){drawerOpen=!drawerOpen;document.getElementById('cdrawer').classList.toggle('open',drawerOpen);renderDrawer();}
+function renderDrawer(){
+  const q=(document.getElementById('drsrch')?.value||'').toLowerCase();
+  document.getElementById('drbody').innerHTML=CATS.map(cat=>{
+    const fl=cat.cols.filter(c=>!q||c.toLowerCase().includes(q));if(!fl.length)return'';
+    const sel=fl.filter(c=>selCols.has(toKey(c))).length,allS=sel===fl.length,isO=catOpen[cat.id]||!!q;
+    return'<div><div class="dr-cat-hdr" onclick="toggleCat(\''+cat.id+'\')"><input type="checkbox" '+(allS?'checked':'')+' onclick="event.stopPropagation();toggleCatAll(\''+cat.id+'\',\''+q+'\')" style="cursor:pointer;accent-color:var(--blue)"><span class="dr-cat-lbl">'+cat.label+'</span><span class="dr-cat-cnt">'+sel+'/'+fl.length+'</span><span style="font-size:10px;color:var(--tx2);display:inline-block;'+(isO?'transform:rotate(90deg)':'')+'">&#9658;</span></div><div class="dr-cols '+(isO?'open':'')+'">'+fl.map(c=>{const k=toKey(c),hl=q?c.replace(new RegExp('('+q+')','gi'),'<em>$1</em>'):c;return'<div class="dr-col"><input type="checkbox" id="cb_'+k+'" '+(selCols.has(k)?'checked':'')+' onchange="toggleCol(\''+k+'\')" style="accent-color:var(--blue)"><label for="cb_'+k+'">'+hl+'</label></div>';}).join('')+'</div></div>';
+  }).join('');
+  const di=document.getElementById('drinf');if(di)di.textContent=selCols.size+' of '+ALL_COLS.length+' selected';
+}
+function toggleCat(id){catOpen[id]=!catOpen[id];renderDrawer();}
+function toggleCatAll(catId,q){
+  const cat=CATS.find(c=>c.id===catId),fl=q?cat.cols.filter(c=>c.toLowerCase().includes(q)):cat.cols;
+  const keys=fl.map(c=>toKey(c)),allS=keys.every(k=>selCols.has(k));
+  keys.forEach(k=>allS?selCols.delete(k):selCols.add(k));renderDrawer();if(!aggActive)renderCurrentView();
+}
+function toggleCol(k){selCols.has(k)?selCols.delete(k):selCols.add(k);renderDrawer();if(!aggActive)renderCurrentView();}
+function clearAllCols(){selCols.clear();renderDrawer();if(!aggActive)renderCurrentView();}
+function selectDefault(){selCols=new Set(DEFAULT_COLS);renderDrawer();if(!aggActive)renderCurrentView();}
+
+/* ═══════════════════════════════════════════
+   SAVE / LOAD
+═══════════════════════════════════════════ */
+function openSaveModal(){showPane('save-modal',null);}
+function closeSaveModal(){showPane('query',document.querySelectorAll('.htab')[0]);}
+function confirmSave(){
+  const name=document.getElementById('svname')?.value?.trim();if(!name)return;
+  savedQ.push({name,filters:[...actFilters],cols:[...selCols],count:filtData.length,ts:new Date().toLocaleTimeString()});
+  persistSavedQueries();
+  closeSaveModal();renderSaved();
+}
+function renderSaved(){
+  const el=document.getElementById('savedarea');
+  if(!savedQ.length){el.innerHTML='<div class="empty-state">No saved queries yet.</div>';return;}
+  el.innerHTML=savedQ.map((q,i)=>'<div class="sq" onclick="loadQuery('+i+')"><div><div class="sq-n">'+q.name+'</div><div class="sq-m">'+q.count+' records &middot; '+q.cols.length+' columns &middot; '+q.filters.length+' filters &middot; '+q.ts+'</div></div>&#8250;</div>').join('');
+}
+function loadQuery(i){
+  const q=savedQ[i];actFilters=[...q.filters];selCols=new Set(q.cols);
+  renderChips();applyFilters();renderDrawer();showPane('query',document.querySelectorAll('.htab')[0]);
+}
+function persistSavedQueries(){
+  localStorage.setItem(STORE_KEYS.saved,JSON.stringify(savedQ));
+}
+function hydrateSavedQueries(){
+  try{
+    const raw=localStorage.getItem(STORE_KEYS.saved);
+    if(!raw)return;
+    const parsed=JSON.parse(raw);
+    if(Array.isArray(parsed))savedQ=parsed;
+  }catch(e){}
+}
+function persistDashboards(){
+  localStorage.setItem(STORE_KEYS.dashboards,JSON.stringify(dashboards));
+}
+function hydrateDashboards(){
+  try{
+    const raw=localStorage.getItem(STORE_KEYS.dashboards);
+    if(!raw)return;
+    const parsed=JSON.parse(raw);
+    if(Array.isArray(parsed))dashboards=parsed;
+  }catch(e){}
+}
+function visibleDashboards(){
+  return dashboards.filter(d=>d.owner===activeUser||(d.sharedWith||[]).includes(activeUser));
+}
+function switchUser(user){
+  activeUser=user;
+  renderDashboardList();
+}
+function createDashboard(){
+  const name=prompt('Dashboard name?');
+  if(!name||!name.trim())return;
+  const dash={
+    id:'db-'+Date.now(),
+    name:name.trim(),
+    tags:'',
+    desc:'',
+    owner:activeUser,
+    sharedWith:[],
+    widgets:[],
+    createdAt:new Date().toISOString(),
+    updatedAt:new Date().toISOString()
+  };
+  dashboards.unshift(dash);
+  activeDashboardId=dash.id;
+  persistDashboards();
+  renderDashboardList();
+  renderActiveDashboard();
+}
+function currentDashboard(){
+  return dashboards.find(d=>d.id===activeDashboardId)||null;
+}
+function esc(v){
+  return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function applyWidgetFilters(rows,filters){
+  return rows.filter(row=>(filters||[]).every(f=>{
+    const rv=String(row[f.col]!=null?row[f.col]:'').toLowerCase();
+    const fv=String(f.val!=null?f.val:'').toLowerCase();
+    if(f.op==='equals')return rv===fv;
+    if(f.op==='contains')return rv.includes(fv);
+    if(f.op==='starts with')return rv.startsWith(fv);
+    if(f.op==='not equals')return rv!==fv;
+    if(f.op==='is empty')return !rv||rv==='—';
+    if(f.op==='is not empty')return rv&&rv!=='—';
+    if(f.op==='greater than')return parseFloat(rv)>parseFloat(fv);
+    if(f.op==='less than')return parseFloat(rv)<parseFloat(fv);
+    return true;
+  }));
+}
+function buildWidgetPreview(w){
+  const st=w.state||{};
+  const rows=applyWidgetFilters(DATA,st.filters||[]);
+  if(st.aggActive&&(st.aggDims||[]).length&&(st.aggVals||[]).length){
+    const gmap={};
+    rows.forEach(row=>{
+      const key=st.aggDims.map(d=>String(row[d.key]!=null?row[d.key]:'—')).join('\x00');
+      if(!gmap[key])gmap[key]={rv:st.aggDims.map(d=>String(row[d.key]!=null?row[d.key]:'—')),rows:[]};
+      gmap[key].rows.push(row);
+    });
+    const aggRows=Object.values(gmap).map(g=>{
+      const out={_rv:g.rv};
+      st.aggVals.forEach(vf=>{out[vf.key+'|'+vf.fn]=AGG[vf.fn](g.rows.map(r=>r[vf.key]));});
+      return out;
+    });
+    const top=aggRows.slice(0,5);
+    const head=st.aggDims.map(d=>'<th>'+esc(d.label||d.key)+'</th>').join('')+
+      st.aggVals.map(v=>'<th>'+esc((v.fn||'')+' · '+(v.label||v.key))+'</th>').join('');
+    const body=top.map(r=>{
+      const dims=(r._rv||[]).map(v=>'<td>'+esc(v)+'</td>').join('');
+      const vals=st.aggVals.map(v=>{
+        const val=r[v.key+'|'+v.fn];
+        return '<td>'+esc(fmtAggVal(val,v.key,v.fn))+'</td>';
+      }).join('');
+      return '<tr>'+dims+vals+'</tr>';
+    }).join('');
+    return '<div class="widget-preview"><table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table></div><p class="sq-m">'+aggRows.length+' groups from '+rows.length+' records</p>';
+  }
+  const cols=(st.cols&&st.cols.length?st.cols:DEFAULT_COLS).slice(0,5).map(k=>ALL_COLS.find(c=>c.key===k)).filter(Boolean);
+  if(!cols.length)return '<div class="widget-preview"><div class="muted">No columns in this widget snapshot.</div></div>';
+  const topRows=rows.slice(0,6);
+  const head=cols.map(c=>'<th>'+esc(c.label)+'</th>').join('');
+  const body=topRows.map(r=>'<tr>'+cols.map(c=>'<td>'+esc(r[c.key]!=null?r[c.key]:'—')+'</td>').join('')+'</tr>').join('');
+  return '<div class="widget-preview"><table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table></div><p class="sq-m">'+rows.length+' records (showing '+topRows.length+')</p>';
+}
+function renderWidgetCard(w,i){
+  return '<div class="widget"><h4>'+esc(w.title)+'</h4><p>'+esc(w.subtitle||'')+'</p><p><strong>'+esc(w.primaryValue||'')+'</strong></p>'+buildWidgetPreview(w)+'<div style="display:flex;gap:6px"><button class="btn sm" onclick="loadWidget('+i+')">Open</button><button class="btn sm" onclick="removeWidget('+i+')">Remove</button></div></div>';
+}
+function openDashboard(id){
+  activeDashboardId=id;
+  renderDashboardList();
+}
+function selectDashboardFromDropdown(id){
+  activeDashboardId=id||null;
+  renderDashboardList();
+}
+function renderDashboardList(){
+  const dd=document.getElementById('dashboard-select');
+  const vis=visibleDashboards();
+  if(!vis.length){
+    dd.innerHTML='<option value="">No dashboards</option>';
+    activeDashboardId=null;
+    renderActiveDashboard();
+    return;
+  }
+  if(!activeDashboardId||!vis.some(d=>d.id===activeDashboardId))activeDashboardId=vis[0].id;
+  dd.innerHTML=vis.map(d=>'<option value="'+d.id+'" '+(d.id===activeDashboardId?'selected':'')+'>'+esc(d.name)+' ('+d.owner+')</option>').join('');
+  renderActiveDashboard();
+}
+function renderActiveDashboard(){
+  const d=currentDashboard();
+  const metaEl=document.getElementById('dash-meta');
+  const widgetsEl=document.getElementById('dash-widgets');
+  if(!d){
+    metaEl.textContent='No dashboard selected. Create one or ask another user to share.';
+    widgetsEl.innerHTML='<div class="empty-state" style="grid-column:1/-1;padding:24px">Pick or create a dashboard to start adding widgets.</div>';
+    return;
+  }
+  metaEl.textContent=d.name+' · Owner: '+d.owner+' · Shared with: '+((d.sharedWith&&d.sharedWith.length)?d.sharedWith.join(', '):'none');
+  if(!(d.widgets||[]).length){
+    widgetsEl.innerHTML='<div class="empty-state" style="grid-column:1/-1;padding:24px">No widgets yet. Build a query/graph, then click "Add widget".</div>';
+    return;
+  }
+  widgetsEl.innerHTML=d.widgets.map((w,i)=>renderWidgetCard(w,i)).join('');
+}
+function deleteActiveDashboard(){
+  const d=currentDashboard();
+  if(!d)return;
+  if(d.owner!==activeUser){alert('Only owner can delete this dashboard.');return;}
+  if(!confirm('Delete dashboard "'+d.name+'"?'))return;
+  dashboards=dashboards.filter(x=>x.id!==d.id);
+  activeDashboardId=null;
+  persistDashboards();
+  renderDashboardList();
+}
+function shareActiveDashboard(){
+  const d=currentDashboard();
+  if(!d)return;
+  if(d.owner!==activeUser){alert('Only owner can share this dashboard.');return;}
+  const raw=prompt('Share with users (comma-separated):',(d.sharedWith||[]).join(', '));
+  if(raw===null)return;
+  d.sharedWith=raw.split(',').map(x=>x.trim()).filter(Boolean);
+  d.updatedAt=new Date().toISOString();
+  persistDashboards();
+  renderActiveDashboard();
+  renderDashboardList();
+}
+function addWidgetFromCurrentView(){
+  const d=currentDashboard();
+  if(!d){alert('Create or select a dashboard first.');return;}
+  if(d.owner!==activeUser){alert('Only owner can edit this dashboard.');return;}
+  const title=prompt('Widget title?','Current view snapshot');
+  if(!title)return;
+  const chartSpec=aggActive?buildAggGraphSpec():buildRawGraphSpec();
+  const primaryValue=aggActive?((lastAggRows&&lastAggRows.length)+' groups from '+filtData.length+' records'):(filtData.length+' records');
+  const subtitle=chartSpec.subtitle||'Query snapshot';
+  d.widgets=d.widgets||[];
+  d.widgets.push({
+    id:'wg-'+Date.now(),
+    title:title.trim(),
+    subtitle,
+    primaryValue,
+    state:{
+      filters:[...actFilters],
+      cols:[...selCols],
+      aggOpen,
+      aggDims:[...aggDims],
+      aggVals:[...aggVals],
+      aggActive,
+      graphConfig:{...graphConfig}
+    }
+  });
+  d.updatedAt=new Date().toISOString();
+  persistDashboards();
+  renderActiveDashboard();
+  renderDashboardList();
+}
+function addWidgetFromSavedView(){
+  const d=currentDashboard();
+  if(!d){alert('Create or select a dashboard first.');return;}
+  if(d.owner!==activeUser){alert('Only owner can edit this dashboard.');return;}
+  if(!savedQ.length){alert('No saved views available. Save a query first.');return;}
+  const choices=savedQ.map((q,i)=>(i+1)+'. '+q.name).join('\n');
+  const pickRaw=prompt('Select saved view number:\n'+choices,'1');
+  if(pickRaw===null)return;
+  const idx=Number(pickRaw)-1;
+  if(!Number.isInteger(idx)||idx<0||idx>=savedQ.length){alert('Invalid selection.');return;}
+  const q=savedQ[idx];
+  const rows=applyWidgetFilters(DATA,q.filters||[]);
+  d.widgets=d.widgets||[];
+  d.widgets.push({
+    id:'wg-'+Date.now(),
+    title:q.name,
+    subtitle:'Saved view widget',
+    primaryValue:rows.length+' records',
+    state:{
+      filters:[...(q.filters||[])],
+      cols:[...(q.cols||DEFAULT_COLS)],
+      aggOpen:false,
+      aggDims:[],
+      aggVals:[],
+      aggActive:false,
+      graphConfig:{active:false,type:'bar',dim:'w_status',val:'count'}
+    }
+  });
+  d.updatedAt=new Date().toISOString();
+  persistDashboards();
+  renderActiveDashboard();
+  renderDashboardList();
+}
+function loadWidget(i){
+  const d=currentDashboard();
+  if(!d||!d.widgets||!d.widgets[i])return;
+  const w=d.widgets[i];
+  actFilters=[...w.state.filters];
+  selCols=new Set(w.state.cols);
+  aggOpen=!!w.state.aggOpen;
+  aggDims=[...w.state.aggDims];
+  aggVals=[...w.state.aggVals];
+  aggActive=!!w.state.aggActive;
+  graphConfig={...graphConfig,...w.state.graphConfig};
+  document.getElementById('agg-bar').classList.toggle('visible',aggOpen);
+  document.getElementById('agg-toggle-btn').classList.toggle('tog',aggOpen);
+  document.getElementById('agg-mode-badge').style.display=aggActive?'':'none';
+  renderAggChips();
+  renderChips();
+  applyFilters();
+  renderDrawer();
+  if(graphConfig.active)runGraph();
+  showPane('query',document.querySelectorAll('.htab')[0]);
+}
+function removeWidget(i){
+  const d=currentDashboard();
+  if(!d||d.owner!==activeUser)return;
+  d.widgets.splice(i,1);
+  d.updatedAt=new Date().toISOString();
+  persistDashboards();
+  renderActiveDashboard();
+  renderDashboardList();
+}
+function showPane(name,btn){
+  document.querySelectorAll('.htab').forEach(t=>t.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  document.getElementById('pane-query').style.display=name==='query'?'block':'none';
+  document.getElementById('pane-saved').style.display=name==='saved'?'block':'none';
+  document.getElementById('pane-dashboards').style.display=name==='dashboards'?'block':'none';
+  document.getElementById('pane-save-modal').style.display=name==='save-modal'?'block':'none';
+  if(name==='saved')renderSaved();
+  if(name==='dashboards')renderDashboardList();
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+document.addEventListener('click',closeRowMenus);
+hydrateSavedQueries();
+hydrateDashboards();
+renderRowMenus();
+renderAggChips();
+renderDrawer();
+selectDefault();
+refreshGraphOptions();
+applyFilters();
+renderSaved();
+renderDashboardList();
+switchView('table');
+</script>
+</body>
+</html>
+
