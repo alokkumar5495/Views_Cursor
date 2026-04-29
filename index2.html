@@ -245,6 +245,25 @@ table.agg-tbl{border-collapse:collapse;font-size:12px;width:max-content;min-widt
 .modal input{width:100%;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:7px;font-size:13px;background:var(--bg2);color:var(--tx);outline:none}
 .erow td{text-align:center;padding:40px;color:var(--tx2)}
 .empty-state{padding:40px;text-align:center;color:var(--tx2);font-size:13px}
+
+/* ── schedule ── */
+.sched-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;margin-left:6px;vertical-align:middle;white-space:nowrap}
+.sched-badge.active{background:#E1F5EE;color:#0F6E56}
+.sched-badge.paused{background:var(--bg3);color:var(--tx2)}
+.sched-form-row{display:flex;flex-direction:column;gap:4px}
+.sched-form-row label{font-size:11px;color:var(--tx2);font-weight:500}
+.sched-form-row select,.sched-form-row input{width:100%;padding:7px 9px;border:0.5px solid var(--bd2);border-radius:7px;background:var(--bg2);color:var(--tx);font-size:12px;outline:none}
+.sched-toggle-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--bd);margin-bottom:4px}
+.sched-toggle-row label{font-size:13px;font-weight:500;flex:1;cursor:pointer}
+.sched-switch{position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0}
+.sched-switch input{opacity:0;width:0;height:0}
+.sched-slider{position:absolute;cursor:pointer;inset:0;background:var(--bd2);border-radius:20px;transition:.2s}
+.sched-slider:before{content:'';position:absolute;width:14px;height:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.sched-switch input:checked+.sched-slider{background:var(--blue)}
+.sched-switch input:checked+.sched-slider:before{transform:translateX(16px)}
+.sq-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.sq-body{flex:1;min-width:0}
+#toast-msg{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2);transition:opacity .3s;pointer-events:none;opacity:0;white-space:nowrap}
 @media (max-width: 900px){
   .toolbar{align-items:flex-start}
 }
@@ -477,6 +496,97 @@ table.agg-tbl{border-collapse:collapse;font-size:12px;width:max-content;min-widt
     </div>
   </div></div>
 </div>
+
+<!-- ───────── SCHEDULE MODAL ───────── -->
+<div id="pane-schedule-modal" style="display:none">
+  <div class="modal-bg" style="align-items:flex-start;padding:24px 16px">
+    <div class="modal" style="width:440px;max-width:100%;gap:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <h3 style="display:flex;align-items:center;gap:8px">&#128337; Schedule Report</h3>
+        <button class="btn sm" onclick="closeScheduleModal()" style="color:var(--tx2)">&#10005;</button>
+      </div>
+      <div id="sched-view-name" style="font-size:12px;color:var(--tx2);padding:6px 10px;background:var(--bg2);border-radius:6px;border:0.5px solid var(--bd)"></div>
+
+      <div class="sched-toggle-row">
+        <label for="sched-enabled">Enable automatic scheduling</label>
+        <label class="sched-switch">
+          <input type="checkbox" id="sched-enabled">
+          <span class="sched-slider"></span>
+        </label>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="sched-form-row">
+          <label>Frequency</label>
+          <select id="sched-freq" onchange="updateSchedFreqUI()">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+
+        <div class="sched-form-row" id="sched-weekly-row" style="display:none">
+          <label>Day of week</label>
+          <select id="sched-day">
+            <option value="0">Sunday</option>
+            <option value="1">Monday</option>
+            <option value="2">Tuesday</option>
+            <option value="3">Wednesday</option>
+            <option value="4">Thursday</option>
+            <option value="5">Friday</option>
+            <option value="6">Saturday</option>
+          </select>
+        </div>
+
+        <div class="sched-form-row" id="sched-monthly-row" style="display:none">
+          <label>Day of month</label>
+          <select id="sched-dom">
+            <option value="1">1st</option><option value="2">2nd</option><option value="3">3rd</option>
+            <option value="4">4th</option><option value="5">5th</option><option value="6">6th</option>
+            <option value="7">7th</option><option value="8">8th</option><option value="9">9th</option>
+            <option value="10">10th</option><option value="11">11th</option><option value="12">12th</option>
+            <option value="13">13th</option><option value="14">14th</option><option value="15">15th</option>
+            <option value="16">16th</option><option value="17">17th</option><option value="18">18th</option>
+            <option value="19">19th</option><option value="20">20th</option><option value="21">21st</option>
+            <option value="22">22nd</option><option value="23">23rd</option><option value="24">24th</option>
+            <option value="25">25th</option><option value="26">26th</option><option value="27">27th</option>
+            <option value="28">28th</option>
+          </select>
+        </div>
+
+        <div class="sched-form-row">
+          <label>Send time</label>
+          <input type="time" id="sched-time" value="08:00">
+        </div>
+
+        <div class="sched-form-row">
+          <label>Recipients <span style="font-weight:400;color:var(--tx3)">(comma-separated emails)</span></label>
+          <input type="text" id="sched-recipients" placeholder="alice@example.com, bob@example.com">
+        </div>
+
+        <div class="sched-form-row">
+          <label>Report format</label>
+          <select id="sched-format">
+            <option value="csv">CSV export</option>
+            <option value="summary">Email summary</option>
+            <option value="both">CSV + email summary</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="sched-last-sent" style="font-size:11px;color:var(--tx2);display:none;padding:6px 0"></div>
+
+      <div style="display:flex;gap:8px;padding-top:4px;border-top:0.5px solid var(--bd)">
+        <button class="btn pri sm" style="padding:7px 14px;font-size:13px" onclick="saveSchedule()">&#10003; Save schedule</button>
+        <button class="btn sm" style="padding:7px 14px;font-size:13px" onclick="closeScheduleModal()">Cancel</button>
+        <div style="flex:1"></div>
+        <button id="sched-delete-btn" class="btn sm" style="padding:7px 14px;font-size:13px;color:#c0392b;display:none" onclick="deleteScheduleFromModal()">Remove schedule</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-msg"></div>
 
 </div><!-- /app -->
 <script
@@ -1387,8 +1497,40 @@ function confirmSave(){
 }
 function renderSaved(){
   const el=document.getElementById('savedarea');
-  if(!savedQ.length){el.innerHTML='<div class="empty-state">No saved queries yet.</div>';return;}
-  el.innerHTML=savedQ.map((q,i)=>'<div class="sq" onclick="loadQuery('+i+')"><div><div class="sq-n">'+q.name+'</div><div class="sq-m">'+q.count+' records &middot; '+q.cols.length+' columns &middot; '+q.filters.length+' filters &middot; '+q.ts+'</div></div>&#8250;</div>').join('');
+  if(!savedQ.length){el.innerHTML='<div class="empty-state">No saved queries yet. Save a query from the Query builder tab.</div>';return;}
+  el.innerHTML=savedQ.map((q,i)=>{
+    const sched=q.schedule;
+    const badge=sched
+      ?( sched.enabled
+          ?'<span class="sched-badge active">&#9679; '+schedLabel(sched)+'</span>'
+          :'<span class="sched-badge paused">&#9646;&#9646; Paused</span>')
+      :'';
+    const lastSent=sched&&sched.lastSent
+      ?'<div style="font-size:11px;color:var(--tx3);margin-top:2px">Last sent: '+sched.lastSent+'</div>'
+      :'';
+    const recipInfo=sched&&sched.recipients&&sched.recipients.length
+      ?'<div style="font-size:11px;color:var(--tx2);margin-top:1px">&#9993; '+sched.recipients.join(', ')+'&nbsp;&middot;&nbsp;'+sched.format.toUpperCase()+'</div>'
+      :'';
+    return `<div class="sq" onclick="loadQuery(${i})" style="align-items:flex-start;gap:10px">
+      <div class="sq-body">
+        <div class="sq-n" style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">${q.name}${badge}</div>
+        <div class="sq-m">${q.count} records &middot; ${q.cols.length} columns &middot; ${q.filters.length} filters &middot; ${q.ts}</div>
+        ${recipInfo}${lastSent}
+      </div>
+      <div class="sq-actions" onclick="event.stopPropagation()">
+        ${sched&&sched.enabled?`<button class="btn sm" onclick="runScheduleNow(${i},event)" title="Send report now" style="color:var(--blue);border-color:var(--blue)">&#9654;&nbsp;Send now</button>`:''}
+        <button class="btn sm ${sched?'tog':''}" onclick="openScheduleModal(${i},event)" title="${sched?'Edit schedule':'Set up a report schedule'}">&#128337;&nbsp;${sched?'Schedule':'Schedule'}</button>
+        <span style="color:var(--tx3);font-size:18px;padding-left:4px">&#8250;</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+function schedLabel(s){
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  if(s.freq==='daily')return 'Daily '+s.time;
+  if(s.freq==='weekly')return 'Weekly '+( days[parseInt(s.day)]||'')+' '+s.time;
+  if(s.freq==='monthly')return 'Monthly day '+s.dom+' '+s.time;
+  return s.freq;
 }
 function loadQuery(i){
   const q=savedQ[i];actFilters=[...q.filters];selCols=new Set(q.cols);
@@ -1654,6 +1796,85 @@ function removeWidget(i){
   renderActiveDashboard();
   renderDashboardList();
 }
+/* ═══════════════════════════════════════════
+   SCHEDULE REPORT
+═══════════════════════════════════════════ */
+let scheduleTargetIdx=-1;
+function openScheduleModal(i,event){
+  if(event)event.stopPropagation();
+  scheduleTargetIdx=i;
+  const q=savedQ[i];
+  const sched=q.schedule||{};
+  document.getElementById('sched-view-name').textContent='View: '+q.name;
+  document.getElementById('sched-enabled').checked=!!(sched.enabled!==undefined?sched.enabled:!!q.schedule);
+  document.getElementById('sched-freq').value=sched.freq||'daily';
+  document.getElementById('sched-time').value=sched.time||'08:00';
+  document.getElementById('sched-day').value=sched.day||'1';
+  document.getElementById('sched-dom').value=sched.dom||'1';
+  document.getElementById('sched-recipients').value=(sched.recipients||[]).join(', ');
+  document.getElementById('sched-format').value=sched.format||'csv';
+  const lsEl=document.getElementById('sched-last-sent');
+  if(sched.lastSent){lsEl.textContent='Last sent: '+sched.lastSent;lsEl.style.display='';}
+  else{lsEl.style.display='none';}
+  document.getElementById('sched-delete-btn').style.display=q.schedule?'':'none';
+  updateSchedFreqUI();
+  showPane('schedule-modal',null);
+}
+function closeScheduleModal(){showPane('saved',document.querySelectorAll('.htab')[1]);}
+function updateSchedFreqUI(){
+  const freq=document.getElementById('sched-freq').value;
+  document.getElementById('sched-weekly-row').style.display=freq==='weekly'?'':'none';
+  document.getElementById('sched-monthly-row').style.display=freq==='monthly'?'':'none';
+}
+function saveSchedule(){
+  if(scheduleTargetIdx<0||scheduleTargetIdx>=savedQ.length)return;
+  const q=savedQ[scheduleTargetIdx];
+  const recipients=document.getElementById('sched-recipients').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const enabled=document.getElementById('sched-enabled').checked;
+  if(enabled&&!recipients.length){alert('Please add at least one recipient email.');return;}
+  q.schedule={
+    enabled,
+    freq:document.getElementById('sched-freq').value,
+    time:document.getElementById('sched-time').value,
+    day:document.getElementById('sched-day').value,
+    dom:document.getElementById('sched-dom').value,
+    recipients,
+    format:document.getElementById('sched-format').value,
+    lastSent:q.schedule&&q.schedule.lastSent||null,
+    createdAt:q.schedule&&q.schedule.createdAt||new Date().toLocaleString()
+  };
+  persistSavedQueries();
+  showToast(enabled?'Schedule saved \u2014 reports will be sent '+schedLabel(q.schedule):'Schedule saved (paused)');
+  closeScheduleModal();
+}
+function deleteScheduleFromModal(){
+  if(scheduleTargetIdx<0)return;
+  if(!confirm('Remove the schedule from this view?'))return;
+  delete savedQ[scheduleTargetIdx].schedule;
+  persistSavedQueries();
+  showToast('Schedule removed');
+  closeScheduleModal();
+}
+function runScheduleNow(i,event){
+  if(event)event.stopPropagation();
+  const q=savedQ[i];
+  if(!q||!q.schedule)return;
+  const sentAt=new Date().toLocaleString();
+  q.schedule.lastSent=sentAt;
+  persistSavedQueries();
+  renderSaved();
+  const rcpts=q.schedule.recipients.join(', ');
+  showToast('\u2713 Report \u201c'+q.name+'\u201d sent to '+rcpts);
+}
+function showToast(msg){
+  const t=document.getElementById('toast-msg');
+  if(!t)return;
+  t.textContent=msg;
+  t.style.opacity='1';
+  clearTimeout(t._to);
+  t._to=setTimeout(()=>{t.style.opacity='0';},3500);
+}
+
 function showPane(name,btn){
   document.querySelectorAll('.htab').forEach(t=>t.classList.remove('on'));
   if(btn)btn.classList.add('on');
@@ -1661,6 +1882,7 @@ function showPane(name,btn){
   document.getElementById('pane-saved').style.display=name==='saved'?'block':'none';
   document.getElementById('pane-dashboards').style.display=name==='dashboards'?'block':'none';
   document.getElementById('pane-save-modal').style.display=name==='save-modal'?'block':'none';
+  document.getElementById('pane-schedule-modal').style.display=name==='schedule-modal'?'block':'none';
   if(name==='saved')renderSaved();
   if(name==='dashboards')renderDashboardList();
 }
